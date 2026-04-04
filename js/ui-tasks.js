@@ -4,11 +4,7 @@
  */
 
 import { showToast } from './ui-shared.js';
-
-const AREAS = [
-  'Cocina', 'Salón', 'Dormitorios', 'Baño',
-  'Exterior', 'Compras', 'Gestiones', 'Otros',
-];
+import { taskAreas } from './ui-settings.js';
 
 /** Inyecta el HTML del módulo en el contenedor #tasks-module */
 export function initTasksUI() {
@@ -42,7 +38,7 @@ export function initTasksUI() {
         </div>
         <div class="form-group">
           <select id="tasks-select-area" class="form-select">
-            ${AREAS.map(a => `<option value="${a}">${a}</option>`).join('')}
+            ${taskAreas.map(a => `<option value="${a}">${a}</option>`).join('')}
           </select>
         </div>
         <button type="submit" class="btn btn--primary btn--full btn--pill" id="tasks-submit-btn">

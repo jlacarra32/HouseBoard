@@ -4,11 +4,7 @@
  */
 
 import { showToast } from './ui-shared.js';
-
-const CATEGORIES = [
-  'Fruta y Verdura', 'Lácteos', 'Carnicería', 'Panadería',
-  'Congelados', 'Limpieza', 'Higiene', 'Bebidas', 'Otros',
-];
+import { shoppingCategories } from './ui-settings.js';
 
 /** Inyecta el HTML del módulo en el contenedor #shopping-module */
 export function initShoppingUI() {
@@ -43,7 +39,7 @@ export function initShoppingUI() {
           </div>
           <div class="form-group">
             <select id="shopping-select-cat" class="form-select">
-              ${CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('')}
+              ${shoppingCategories.map(c => `<option value="${c}">${c}</option>`).join('')}
             </select>
           </div>
         </div>
@@ -58,7 +54,7 @@ export function initShoppingUI() {
     <!-- Filtros de categoría -->
     <div class="filter-bar" id="shopping-filter-bar" role="group" aria-label="Filtrar por categoría">
       <button class="chip chip--active" data-category="Todas">Todas</button>
-      ${CATEGORIES.map(c => `<button class="chip" data-category="${c}">${c}</button>`).join('')}
+      ${shoppingCategories.map(c => `<button class="chip" data-category="${c}">${c}</button>`).join('')}
     </div>
 
     <!-- Skeleton de carga -->

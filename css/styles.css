@@ -718,45 +718,7 @@ body {
   flex-shrink: 0;
 }
 
-/* ─── Edit-name button (header) ──────────────────────────────────────────────── */
-.app-header__user {
-  /* Override: cuando es <button> necesita reset visual */
-  background: none;
-  border: none;
-  font: inherit;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-text-muted);
-  padding: 6px 10px;
-  border-radius: var(--radius-pill);
-  transition: background 0.2s ease, color 0.2s ease;
-}
-
-.app-header__user:hover {
-  background: var(--color-primary-pale);
-  color: var(--color-primary);
-}
-
-.app-header__user svg {
-  width: 16px;
-  height: 16px;
-  stroke: currentColor;
-}
-
-.edit-name-icon {
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  width: 13px !important;
-  height: 13px !important;
-}
-
-.app-header__user:hover .edit-name-icon {
-  opacity: 1;
-}
+/* ─── (edit-name button removed — perfil moved to settings panel) ──────────── */
 
 /* ─── Modal ──────────────────────────────────────────────────────────────────── */
 .modal-overlay {
@@ -923,5 +885,279 @@ body {
 
   .skeleton-card {
     background: #202D22;
+  }
+}
+
+/* ─── Header: right group (user + settings) ──────────────────────────────────── */
+.app-header__right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.app-header__user {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+}
+
+.app-header__user svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+}
+
+.app-header__settings {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-pill);
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.35s ease;
+}
+
+.app-header__settings:hover {
+  background: var(--color-primary-pale);
+  color: var(--color-primary);
+  transform: rotate(45deg);
+}
+
+.app-header__settings svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+}
+
+/* ─── Settings panel ──────────────────────────────────────────────────────────── */
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 490;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(3px);
+  animation: fadeIn 0.2s ease;
+}
+
+.settings-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 500;
+  width: min(400px, 100vw);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.settings-panel--open {
+  transform: translateX(0);
+}
+
+.settings-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.settings-panel__title {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+.settings-panel__close {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.settings-panel__close:hover {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+.settings-panel__close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.settings-panel__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ─── Settings blocks ──────────────────────────────────────────────────────── */
+.settings-block {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.settings-block__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+}
+
+.settings-block__title svg {
+  width: 15px;
+  height: 15px;
+  stroke: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.settings-block__content {
+  padding: 14px 16px;
+}
+
+.settings-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+/* Input + button row */
+.settings-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.settings-input-row--mt {
+  margin-top: 12px;
+}
+
+.settings-input-row .form-input {
+  flex: 1;
+  padding: 10px 12px;
+  font-size: 0.875rem;
+}
+
+.settings-save-btn,
+.settings-add-btn {
+  flex-shrink: 0;
+  height: auto;
+  padding: 10px 16px;
+  font-size: 0.875rem;
+  border-radius: var(--radius-sm);
+  width: auto;
+  gap: 6px;
+}
+
+.settings-save-btn svg,
+.settings-add-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ─── Settings chips ──────────────────────────────────────────────────────── */
+.settings-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 28px;
+}
+
+.settings-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px 5px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  background: var(--color-primary-pale);
+  color: var(--color-primary);
+  border: 1.5px solid var(--color-border);
+  animation: cardIn 0.2s ease both;
+}
+
+.settings-chip__remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  color: var(--color-primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s ease, background 0.2s ease, color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.settings-chip__remove:hover {
+  opacity: 1;
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+}
+
+.settings-chip__remove svg {
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+}
+
+/* Dark mode adjustments for settings */
+@media (prefers-color-scheme: dark) {
+  .settings-panel {
+    background: var(--color-surface);
+  }
+
+  .settings-block {
+    background: var(--color-surface);
+  }
+
+  .settings-block__title {
+    background: var(--color-surface-2);
+  }
+
+  .settings-chip {
+    background: rgba(61, 122, 94, 0.15);
+    border-color: var(--color-border);
   }
 }

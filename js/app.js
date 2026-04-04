@@ -4,7 +4,8 @@
  * NO contiene lógica de Firestore directa.
  */
 
-import { showModule, setActiveUser, showToast, bindUserEdit } from './ui-shared.js';
+import { showModule, setActiveUser, showToast } from './ui-shared.js';
+import { initSettingsPanel, subscribeToConfig, onShoppingCategoriesChange, onTaskAreasChange } from './ui-settings.js';
 import {
   subscribeToShoppingItems,
   addShoppingItem,
@@ -95,9 +96,32 @@ function startApp() {
 
   setActiveUser(currentUser);
 
-  // Modal de edición de nombre
-  bindUserEdit((newName) => {
-    currentUser = newName;
+  // Panel de ajustes (settings)
+  initSettingsPanel();
+  subscribeToConfig();
+
+  // Cuando las categorías cambien, sync del select + filter bar
+  onShoppingCategoriesChange((cats) => {
+    const sel = document.getElementById('shopping-select-cat');
+    if (sel) {
+      const cur = sel.value;
+      sel.innerHTML = cats.map(c => `<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');
+    }
+    const bar = document.getElementById('shopping-filter-bar');
+    if (bar) {
+      const active = bar.querySelector('.chip--active')?.dataset.category || 'Todas';
+      bar.innerHTML = `<button class="chip${active==='Todas'?' chip--active':''}" data-category="Todas">Todas</button>`
+        + cats.map(c => `<button class="chip${c===active?' chip--active':''}" data-category="${c}">${c}</button>`).join('');
+    }
+  });
+
+  // Cuando las áreas cambien, sync del select
+  onTaskAreasChange((areas) => {
+    const sel = document.getElementById('tasks-select-area');
+    if (sel) {
+      const cur = sel.value;
+      sel.innerHTML = areas.map(a => `<option value="${a}"${a===cur?' selected':''}>${a}</option>`).join('');
+    }
   });
 
   // Inicializa el DOM de cada módulo
