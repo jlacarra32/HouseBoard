@@ -1,0 +1,18 @@
+/* tasks.css — Estilos específicos del módulo Tareas del Hogar */
+
+#tasks-module {
+  width: 100%;
+}
+
+/* Badge de área con un tono diferenciado del de la compra */
+#tasks-module .badge {
+  background: #FFF0E6;
+  color: #C46A1A;
+}
+
+@media (prefers-color-scheme: dark) {
+  #tasks-module .badge {
+    background: #2D1E0F;
+    color: #F4A261;
+  }
+}

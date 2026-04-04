@@ -1,0 +1,16 @@
+/* shopping.css — Estilos específicos del módulo Lista de la Compra */
+
+#shopping-module {
+  width: 100%;
+}
+
+/* El módulo de compra no necesita estilos adicionales más allá
+   de los globales definidos en styles.css.
+   Este archivo queda disponible para overrides específicos futuros. */
+
+/* Override: el badge de categoría en el módulo de compra tiene
+   un color de acento diferente si la categoría es de alimentación */
+#shopping-module .badge {
+  background: var(--color-primary-pale);
+  color: var(--color-primary);
+}

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="L-R Home — App familiar para organizar la lista de la compra y las tareas del hogar en tiempo real." />
+  <title>L-R Home</title>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Lucide Icons (CDN) -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="./css/reset.css" />
+  <link rel="stylesheet" href="./css/styles.css" />
+  <link rel="stylesheet" href="./css/shopping.css" />
+  <link rel="stylesheet" href="./css/tasks.css" />
+</head>
+<body>
+
+  <!-- ──────────────────────────────────────────────────────────────────────────
+       PANTALLA DE BIENVENIDA
+       Se muestra si no hay nombre de usuario guardado en localStorage.
+  ─────────────────────────────────────────────────────────────────────────── -->
+  <div id="welcome-screen" hidden>
+    <h1 class="welcome__logo">L<span>-</span>R Home</h1>
+    <p class="welcome__subtitle">Tu hogar, organizado.</p>
+
+    <div class="welcome__card">
+      <div>
+        <label for="welcome-input">¿Cómo te llaman en casa?</label>
+        <input
+          type="text"
+          id="welcome-input"
+          class="form-input"
+          placeholder="Tu nombre…"
+          maxlength="30"
+          autocomplete="given-name"
+        />
+      </div>
+      <button id="welcome-btn" class="btn btn--primary btn--full btn--pill">
+        Entrar
+      </button>
+    </div>
+  </div>
+
+  <!-- ──────────────────────────────────────────────────────────────────────────
+       APLICACIÓN PRINCIPAL
+       Oculta hasta que hay un nombre de usuario.
+  ─────────────────────────────────────────────────────────────────────────── -->
+  <div id="app" hidden>
+
+    <!-- Header fijo -->
+    <header class="app-header" role="banner">
+      <div class="app-header__logo" aria-label="L-R Home">
+        L<span>-</span>R Home
+      </div>
+      <div class="app-header__user">
+        <i data-lucide="user" aria-hidden="true"></i>
+        <span id="header-username"></span>
+      </div>
+    </header>
+
+    <!-- Navegación horizontal (desktop) -->
+    <nav class="app-nav" role="navigation" aria-label="Módulos de la app">
+      <button
+        class="app-nav__tab tab--active"
+        data-module="shopping-module"
+        role="tab"
+        aria-selected="true"
+        aria-controls="shopping-module"
+        id="tab-shopping"
+      >
+        <i data-lucide="shopping-cart" aria-hidden="true"></i>
+        Compra
+      </button>
+      <button
+        class="app-nav__tab"
+        data-module="tasks-module"
+        role="tab"
+        aria-selected="false"
+        aria-controls="tasks-module"
+        id="tab-tasks"
+      >
+        <i data-lucide="check-square" aria-hidden="true"></i>
+        Tareas
+      </button>
+    </nav>
+
+    <!-- Bottom nav (móvil) -->
+    <nav class="bottom-nav" role="navigation" aria-label="Navegación principal">
+      <div class="bottom-nav__inner">
+        <button
+          class="bottom-nav__tab tab--active"
+          data-module="shopping-module"
+          role="tab"
+          aria-selected="true"
+          aria-controls="shopping-module"
+          id="bottom-tab-shopping"
+        >
+          <i data-lucide="shopping-cart" aria-hidden="true"></i>
+          Compra
+        </button>
+        <button
+          class="bottom-nav__tab"
+          data-module="tasks-module"
+          role="tab"
+          aria-selected="false"
+          aria-controls="tasks-module"
+          id="bottom-tab-tasks"
+        >
+          <i data-lucide="check-square" aria-hidden="true"></i>
+          Tareas
+        </button>
+      </div>
+    </nav>
+
+    <!-- Zona de contenido -->
+    <main class="app-content" role="main" id="content">
+      <!-- Módulo: Lista de la Compra -->
+      <section
+        id="shopping-module"
+        class="module-section"
+        role="tabpanel"
+        aria-labelledby="tab-shopping"
+      ></section>
+
+      <!-- Módulo: Tareas del Hogar -->
+      <section
+        id="tasks-module"
+        class="module-section"
+        role="tabpanel"
+        aria-labelledby="tab-tasks"
+        hidden
+      ></section>
+    </main>
+
+  </div><!-- /#app -->
+
+  <!-- Toast container (fuera del flujo) -->
+  <div id="toast-container" role="status" aria-live="polite" aria-atomic="false"></div>
+
+  <!-- Scripts ES Modules (orden de dependencias) -->
+  <script type="module" src="./js/firebase-config.js"></script>
+  <script type="module" src="./js/db-shopping.js"></script>
+  <script type="module" src="./js/db-tasks.js"></script>
+  <script type="module" src="./js/ui-shared.js"></script>
+  <script type="module" src="./js/ui-shopping.js"></script>
+  <script type="module" src="./js/ui-tasks.js"></script>
+  <script type="module" src="./js/app.js"></script>
+
+</body>
+</html>
