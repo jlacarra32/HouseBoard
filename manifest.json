@@ -1,0 +1,18 @@
+{
+  "name": "L-R Home",
+  "short_name": "L-R Home",
+  "description": "App familiar para organizar la lista de la compra y las tareas del hogar en tiempo real.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5F7F5",
+  "theme_color": "#3D7A5E",
+  "icons": [
+    {
+      "src": "/assets/icon.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
