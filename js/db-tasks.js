@@ -39,7 +39,7 @@ export function subscribeToTasks(callback) {
 
 /**
  * Añade una tarea al hogar.
- * @param {object} taskData - { title, notes, area, addedBy }
+ * @param {object} taskData - { title, notes, area, addedBy, assignedTo }
  */
 export async function addTask(taskData) {
   const title = (taskData.title || '').trim();
@@ -50,12 +50,13 @@ export async function addTask(taskData) {
   await addDoc(collection(db, COLLECTION), {
     title,
     notes,
-    area:      taskData.area    || 'Otros',
-    addedBy:   taskData.addedBy || 'Desconocido',
-    status:    'pending',
-    createdAt: serverTimestamp(),
-    doneAt:    null,
-    doneBy:    null,
+    area:       taskData.area       || 'Otros',
+    addedBy:    taskData.addedBy    || 'Desconocido',
+    assignedTo: taskData.assignedTo || null,
+    status:     'pending',
+    createdAt:  serverTimestamp(),
+    doneAt:     null,
+    doneBy:     null,
   });
 }
 

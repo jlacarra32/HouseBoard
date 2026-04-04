@@ -5,7 +5,7 @@
  */
 
 import { showModule, setActiveUser, showToast } from './ui-shared.js';
-import { initSettingsPanel, subscribeToConfig, onShoppingCategoriesChange, onTaskAreasChange } from './ui-settings.js';
+import { initSettingsPanel, subscribeToConfig, onShoppingCategoriesChange, onTaskAreasChange, onTaskMembersChange } from './ui-settings.js';
 import {
   subscribeToShoppingItems,
   addShoppingItem,
@@ -42,6 +42,7 @@ let currentUser = '';
 let allShoppingItems = [];
 let allTasks = [];
 let activeShoppingCategory = 'Todas';
+let activeTaskArea = 'Todas';
 let unsubscribeShopping = null;
 let unsubscribeTasks = null;
 
@@ -115,12 +116,26 @@ function startApp() {
     }
   });
 
-  // Cuando las áreas cambien, sync del select
+  // Cuando las áreas cambien, sync del select y el filter bar
   onTaskAreasChange((areas) => {
     const sel = document.getElementById('tasks-select-area');
     if (sel) {
       const cur = sel.value;
       sel.innerHTML = areas.map(a => `<option value="${a}"${a===cur?' selected':''}>${a}</option>`).join('');
+    }
+    const bar = document.getElementById('tasks-filter-bar');
+    if (bar) {
+      const active = bar.querySelector('.chip--active')?.dataset.area || 'Todas';
+      bar.innerHTML = `<button class="chip${active==='Todas'?' chip--active':''}" data-area="Todas">Todas</button>`
+        + areas.map(a => `<button class="chip${a===active?' chip--active':''}" data-area="${a}">${a}</button>`).join('');
+    }
+  });
+
+  // Cuando los miembros cambien, sync del datalist
+  onTaskMembersChange((members) => {
+    const list = document.getElementById('tasks-members-list');
+    if (list) {
+      list.innerHTML = members.map(m => `<option value="${m.replace(/"/g, '&quot;')}">`).join('');
     }
   });
 
@@ -219,6 +234,10 @@ function startApp() {
         showToast('Error al limpiar las tareas.', 'error');
       }
     },
+    onAreaFilter: (area) => {
+      activeTaskArea = area;
+      renderTasks(allTasks, activeTaskArea);
+    },
   });
 
   // Suscripciones Firestore (ambas activas desde el arranque)
@@ -236,7 +255,7 @@ function startApp() {
   unsubscribeTasks = subscribeToTasks((tasks) => {
     allTasks = tasks;
     hideTasksSkeleton();
-    renderTasks(tasks);
+    renderTasks(tasks, activeTaskArea);
     const hasDone = tasks.some(t => t.status === 'done');
     toggleTasksFAB(hasDone);
   });

@@ -376,19 +376,22 @@ body {
   to { transform: rotate(360deg); }
 }
 
-/* ─── Filter chips ───────────────────────────────────────────────────────────── */
-.filter-bar {
-  display: flex;
+/* ─── Filter grid ───────────────────────────────────────────────────────────── */
+.filter-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 8px;
   margin-bottom: 16px;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
 }
 
-.filter-bar::-webkit-scrollbar {
-  display: none;
+.filter-grid .chip {
+  width: 100%;
+  justify-content: center;
+}
+
+.filter-grid .chip[data-category="Todas"],
+.filter-grid .chip[data-area="Todas"] {
+  grid-column: 1 / -1;
 }
 
 .chip {

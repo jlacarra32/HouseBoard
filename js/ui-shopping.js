@@ -52,7 +52,7 @@ export function initShoppingUI() {
     </div>
 
     <!-- Filtros de categoría -->
-    <div class="filter-bar" id="shopping-filter-bar" role="group" aria-label="Filtrar por categoría">
+    <div class="filter-grid" id="shopping-filter-bar" role="group" aria-label="Filtrar por categoría">
       <button class="chip chip--active" data-category="Todas">Todas</button>
       ${shoppingCategories.map(c => `<button class="chip" data-category="${c}">${c}</button>`).join('')}
     </div>

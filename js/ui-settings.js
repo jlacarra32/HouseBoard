@@ -16,6 +16,7 @@ import { setActiveUser, showToast } from './ui-shared.js';
 // ─── Referencias Firestore ────────────────────────────────────────────────────
 const shoppingConfigRef = doc(db, 'config', 'shopping');
 const tasksConfigRef    = doc(db, 'config', 'tasks');
+const membersConfigRef  = doc(db, 'config', 'members');
 
 // ─── Estado local de categorías/áreas ────────────────────────────────────────
 /** Categorías de compra actuales (array de strings) */
@@ -30,15 +31,21 @@ export let taskAreas = [
   'Exterior', 'Compras', 'Gestiones', 'Otros',
 ];
 
+/** Miembros del hogar actuales (array de strings) */
+export let taskMembers = [];
+
 /** Callbacks registrados para notificar cambios a otros módulos */
 const categoriesListeners = [];
 const areasListeners      = [];
+const membersListeners    = [];
 
 export function onShoppingCategoriesChange(cb) { categoriesListeners.push(cb); }
 export function onTaskAreasChange(cb)           { areasListeners.push(cb); }
+export function onTaskMembersChange(cb)         { membersListeners.push(cb); }
 
 function notifyCategories() { categoriesListeners.forEach(cb => cb([...shoppingCategories])); }
 function notifyAreas()      { areasListeners.forEach(cb => cb([...taskAreas])); }
+function notifyMembers()    { membersListeners.forEach(cb => cb([...taskMembers])); }
 
 // ─── Suscripción en tiempo real a configuración ───────────────────────────────
 export function subscribeToConfig() {
@@ -62,6 +69,17 @@ export function subscribeToConfig() {
         notifyAreas();
         _renderAreaChips();
         _syncTasksSelect();
+      }
+    }
+  });
+
+  onSnapshot(membersConfigRef, (snap) => {
+    if (snap.exists()) {
+      const members = snap.data().members;
+      if (Array.isArray(members)) {
+        taskMembers = members;
+        notifyMembers();
+        _renderMemberChips();
       }
     }
   });
@@ -105,6 +123,12 @@ export function initSettingsPanel() {
   const addAreaInput = document.getElementById('settings-add-area-input');
   addAreaBtn?.addEventListener('click', () => _addItem('areas'));
   addAreaInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') _addItem('areas'); });
+
+  // Miembros: añadir
+  const addMemberBtn   = document.getElementById('settings-add-member-btn');
+  const addMemberInput = document.getElementById('settings-add-member-input');
+  addMemberBtn?.addEventListener('click', () => _addItem('members'));
+  addMemberInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') _addItem('members'); });
 }
 
 function openPanel() {
@@ -118,6 +142,7 @@ function openPanel() {
   // Renderiza chips con datos actuales
   _renderCategoryChips();
   _renderAreaChips();
+  _renderMemberChips();
 
   // Renderiza iconos Lucide del panel (solo si es la primera vez)
   if (window.lucide) window.lucide.createIcons({ nodes: [panel] });
@@ -155,14 +180,16 @@ function _saveName() {
 
 // ─── Helpers categorías/áreas ─────────────────────────────────────────────────
 async function _addItem(field) {
-  const isCategories = field === 'categories';
-  const inputId  = isCategories ? 'settings-add-cat-input'  : 'settings-add-area-input';
-  const input    = document.getElementById(inputId);
-  const value    = input?.value.trim();
+  let isCategories = field === 'categories';
+  let isAreas = field === 'areas';
+  let isMembers = field === 'members';
+  const inputId = isCategories ? 'settings-add-cat-input' : (isAreas ? 'settings-add-area-input' : 'settings-add-member-input');
+  const input = document.getElementById(inputId);
+  const value = input?.value.trim();
   if (!value) { input?.focus(); return; }
 
-  const list    = isCategories ? shoppingCategories : taskAreas;
-  const ref     = isCategories ? shoppingConfigRef  : tasksConfigRef;
+  const list = isCategories ? shoppingCategories : (isAreas ? taskAreas : taskMembers);
+  const ref = isCategories ? shoppingConfigRef : (isAreas ? tasksConfigRef : membersConfigRef);
   const updated = [...list, value];
 
   try {
@@ -176,11 +203,14 @@ async function _addItem(field) {
 }
 
 async function _deleteItem(field, value) {
-  const isCategories = field === 'categories';
-  const list    = isCategories ? shoppingCategories : taskAreas;
-  const ref     = isCategories ? shoppingConfigRef  : tasksConfigRef;
+  let isCategories = field === 'categories';
+  let isAreas = field === 'areas';
+  let isMembers = field === 'members';
+  
+  const list = isCategories ? shoppingCategories : (isAreas ? taskAreas : taskMembers);
+  const ref = isCategories ? shoppingConfigRef : (isAreas ? tasksConfigRef : membersConfigRef);
   const updated = list.filter(v => v !== value);
-  if (updated.length === 0) {
+  if (updated.length === 0 && !isMembers) { // Miembros puede estar vacío
     showToast('Debe quedar al menos una opción.', 'error');
     return;
   }
@@ -205,6 +235,13 @@ function _renderAreaChips() {
   if (!container) return;
   container.innerHTML = taskAreas.map(a => _chipHTML('areas', a)).join('');
   _bindChipEvents(container, 'areas');
+}
+
+function _renderMemberChips() {
+  const container = document.getElementById('settings-member-chips');
+  if (!container) return;
+  container.innerHTML = taskMembers.map(m => _chipHTML('members', m)).join('');
+  _bindChipEvents(container, 'members');
 }
 
 function _chipHTML(field, value) {
@@ -320,6 +357,23 @@ function _buildPanelHTML() {
             <button class="btn btn--primary settings-save-btn" id="settings-save-name" aria-label="Guardar nombre">
               <i data-lucide="check"></i>
               <span>Guardar</span>
+            </button>
+          </div>
+          
+          <label class="settings-label" style="margin-top: 16px;">Miembros del hogar</label>
+          <div class="settings-chips" id="settings-member-chips"></div>
+          <div class="settings-input-row settings-input-row--mt">
+            <input
+              type="text"
+              id="settings-add-member-input"
+              class="form-input"
+              placeholder="Añadir miembro…"
+              maxlength="30"
+              autocomplete="off"
+            />
+            <button class="btn btn--primary settings-add-btn" id="settings-add-member-btn" aria-label="Añadir miembro">
+              <i data-lucide="plus"></i>
+              <span>Añadir</span>
             </button>
           </div>
         </div>

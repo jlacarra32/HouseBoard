@@ -4,7 +4,7 @@
  */
 
 import { showToast } from './ui-shared.js';
-import { taskAreas } from './ui-settings.js';
+import { taskAreas, taskMembers } from './ui-settings.js';
 
 /** Inyecta el HTML del módulo en el contenedor #tasks-module */
 export function initTasksUI() {
@@ -41,12 +41,32 @@ export function initTasksUI() {
             ${taskAreas.map(a => `<option value="${a}">${a}</option>`).join('')}
           </select>
         </div>
+        <div class="form-group">
+          <input
+            type="text"
+            id="tasks-input-assigned"
+            class="form-input"
+            placeholder="Asignado a (opcional)"
+            list="tasks-members-list"
+            maxlength="30"
+            autocomplete="off"
+          />
+          <datalist id="tasks-members-list">
+            ${taskMembers.map(m => `<option value="${_escapeHTMLforAttr(m)}">`).join('')}
+          </datalist>
+        </div>
         <button type="submit" class="btn btn--primary btn--full btn--pill" id="tasks-submit-btn">
           <i data-lucide="plus" class="btn__icon"></i>
           <span class="btn__text">Añadir tarea</span>
           <span class="btn__spinner" hidden></span>
         </button>
       </form>
+    </div>
+
+    <!-- Filtros de área -->
+    <div class="filter-grid" id="tasks-filter-bar" role="group" aria-label="Filtrar por área">
+      <button class="chip chip--active" data-area="Todas">Todas</button>
+      ${taskAreas.map(a => `<button class="chip" data-area="${_escapeHTMLforAttr(a)}">${_escapeHTMLforAttr(a)}</button>`).join('')}
     </div>
 
     <!-- Skeleton de carga -->
@@ -72,15 +92,17 @@ export function initTasksUI() {
 /**
  * Renderiza la lista de tareas.
  * @param {Array} tasks - Todos los ítems de Firestore
+ * @param {string} activeArea - Área a filtrar
  */
-export function renderTasks(tasks) {
+export function renderTasks(tasks, activeArea = 'Todas') {
   const container = document.getElementById('tasks-list');
   if (!container) return;
 
-  const pending = tasks.filter(t => t.status === 'pending');
-  const done    = tasks.filter(t => t.status === 'done');
+  const filtered = activeArea === 'Todas' ? tasks : tasks.filter(t => t.area === activeArea);
+  const pending = filtered.filter(t => t.status === 'pending');
+  const done    = filtered.filter(t => t.status === 'done');
 
-  if (tasks.length === 0) {
+  if (filtered.length === 0) {
     container.innerHTML = `
       <div class="empty-state">
         <div class="empty-state__emoji">✅</div>
@@ -128,6 +150,9 @@ function renderTaskCard(task) {
   const doneInfo = isDone && task.doneBy
     ? `<span class="item-card__done-by">✓ hecha por ${escapeHTML(task.doneBy)}</span>`
     : '';
+  const assignedInfo = !isDone && task.assignedTo
+    ? `<span class="item-card__assigned" style="display:inline-flex; align-items:center; gap:4px; margin-left:8px; color:var(--color-primary); font-weight:600;"><i data-lucide="user" style="width:14px; height:14px;"></i> Para: ${escapeHTML(task.assignedTo)}</span>`
+    : '';
   const notesHtml = task.notes
     ? `<span class="item-card__notes">${escapeHTML(task.notes)}</span>`
     : '';
@@ -150,6 +175,7 @@ function renderTaskCard(task) {
         <div class="item-card__meta">
           <span class="badge">${escapeHTML(task.area || 'Otros')}</span>
           <span class="item-card__by">por ${escapeHTML(task.addedBy || '')}</span>
+          ${assignedInfo}
           ${doneInfo}
         </div>
       </div>
@@ -197,6 +223,7 @@ export function bindTasksEvents(handlers) {
       const titleInput = document.getElementById('tasks-input-title');
       const notesInput = document.getElementById('tasks-input-notes');
       const areaSelect = document.getElementById('tasks-select-area');
+      const assignedInput = document.getElementById('tasks-input-assigned');
       const title = titleInput?.value.trim();
       if (!title) {
         titleInput?.focus();
@@ -213,9 +240,11 @@ export function bindTasksEvents(handlers) {
           title,
           notes: notesInput?.value.trim() || '',
           area:  areaSelect?.value || 'Otros',
+          assignedTo: assignedInput?.value.trim() || null,
         });
         titleInput.value = '';
         if (notesInput) notesInput.value = '';
+        if (assignedInput) assignedInput.value = '';
         titleInput.focus();
       } finally {
         if (submitBtn) {
@@ -244,6 +273,26 @@ export function bindTasksEvents(handlers) {
       handlers.onClear();
     });
   }
+
+  const filterBar = document.getElementById('tasks-filter-bar');
+  if (filterBar) {
+    filterBar.addEventListener('click', (e) => {
+      const btn = e.target.closest('.chip');
+      if (!btn) return;
+
+      filterBar.querySelectorAll('.chip').forEach(c => c.classList.remove('chip--active'));
+      btn.classList.add('chip--active');
+
+      if (handlers.onAreaFilter) {
+        handlers.onAreaFilter(btn.dataset.area);
+      }
+    });
+  }
+}
+
+function _escapeHTMLforAttr(str) {
+  if (!str) return '';
+  return String(str).replace(/"/g, '&quot;');
 }
 
 function escapeHTML(str) {
