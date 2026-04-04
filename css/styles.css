@@ -276,7 +276,7 @@ body {
   border-radius: var(--radius-sm);
   background: var(--color-bg);
   color: var(--color-text);
-  font-size: 0.9375rem;
+  font-size: 1rem; /* ≥16px: evita zoom automático en iOS */
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
   outline: none;
 }
@@ -402,7 +402,7 @@ body {
 
 .chip--active {
   background: var(--color-primary);
-  color: #fff;
+  color: #ffffff !important; /* fuerza blanco aunque haya herencia de color verde */
   border-color: var(--color-primary);
 }
 
@@ -961,6 +961,7 @@ body {
   flex-direction: column;
   transform: translateX(100%);
   transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform; /* aceleración GPU para animación fluida */
   overflow: hidden;
 }
 
@@ -1011,6 +1012,7 @@ body {
 .settings-panel__body {
   flex: 1;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch; /* scroll inercial en iOS */
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -1022,7 +1024,7 @@ body {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  overflow: hidden;
+  overflow: visible; /* permite que el input inferior no quede recortado */
 }
 
 .settings-block__title {
@@ -1037,6 +1039,7 @@ body {
   padding: 14px 16px 10px;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface-2);
+  border-radius: var(--radius-md) var(--radius-md) 0 0; /* redondea esquinas superiores */
 }
 
 .settings-block__title svg {
@@ -1072,7 +1075,7 @@ body {
 .settings-input-row .form-input {
   flex: 1;
   padding: 10px 12px;
-  font-size: 0.875rem;
+  font-size: 1rem; /* ≥16px en móvil: evita zoom iOS */
 }
 
 .settings-save-btn,
