@@ -200,6 +200,7 @@ body {
 .bottom-nav__inner {
   display: flex;
   height: 100%;
+  width: 100%;
 }
 
 .bottom-nav__tab {

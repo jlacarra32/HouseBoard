@@ -259,9 +259,7 @@ export function bindShoppingEvents(handlers) {
   const fab = document.getElementById('shopping-fab');
   if (fab) {
     fab.addEventListener('click', () => {
-      if (confirm('¿Eliminar todos los productos comprados?')) {
-        handlers.onClear();
-      }
+      handlers.onClear();
     });
   }
 

@@ -245,9 +245,7 @@ export function bindTasksEvents(handlers) {
   const fab = document.getElementById('tasks-fab');
   if (fab) {
     fab.addEventListener('click', () => {
-      if (confirm('¿Eliminar todas las tareas completadas?')) {
-        handlers.onClear();
-      }
+      handlers.onClear();
     });
   }
 }
