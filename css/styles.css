@@ -945,7 +945,15 @@ body {
   z-index: 490;
   background: rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(3px);
-  animation: fadeIn 0.2s ease;
+  /* invisible por defecto, visible via clase — siempre en el DOM */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s ease;
+}
+
+.settings-overlay--visible {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .settings-panel {
@@ -959,14 +967,18 @@ body {
   box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
+  /* siempre en el DOM, fuera de pantalla cuando no está abierto */
   transform: translateX(100%);
   transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: transform; /* aceleración GPU para animación fluida */
+  will-change: transform;
   overflow: hidden;
+  /* bloquea clicks cuando está fuera de pantalla */
+  pointer-events: none;
 }
 
 .settings-panel--open {
   transform: translateX(0);
+  pointer-events: auto; /* activa interacción cuando es visible */
 }
 
 .settings-panel__header {

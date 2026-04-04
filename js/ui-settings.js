@@ -83,7 +83,8 @@ export function initSettingsPanel() {
   overlay?.addEventListener('click', closePanel);
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !panel.hidden) closePanel();
+    const panel = document.getElementById('settings-panel');
+    if (e.key === 'Escape' && panel?.classList.contains('settings-panel--open')) closePanel();
   });
 
   // Perfil: guardar nombre
@@ -111,9 +112,6 @@ function openPanel() {
   const overlay = document.getElementById('settings-overlay');
   const input   = document.getElementById('settings-name-input');
 
-  if (panel)   panel.hidden   = false;
-  if (overlay) overlay.hidden = false;
-
   // Precarga nombre actual
   if (input) input.value = localStorage.getItem('lrhome_user') || '';
 
@@ -121,20 +119,20 @@ function openPanel() {
   _renderCategoryChips();
   _renderAreaChips();
 
-  // Renderiza iconos Lucide del panel
+  // Renderiza iconos Lucide del panel (solo si es la primera vez)
   if (window.lucide) window.lucide.createIcons({ nodes: [panel] });
 
-  requestAnimationFrame(() => panel?.classList.add('settings-panel--open'));
+  // Activa overlay y panel via clases — sin tocar hidden/display
+  // para que el compositing layer ya exista y la transición sea fluida
+  overlay?.classList.add('settings-overlay--visible');
+  panel?.classList.add('settings-panel--open');
 }
 
 function closePanel() {
   const panel   = document.getElementById('settings-panel');
   const overlay = document.getElementById('settings-overlay');
   panel?.classList.remove('settings-panel--open');
-  setTimeout(() => {
-    if (panel)   panel.hidden   = true;
-    if (overlay) overlay.hidden = true;
-  }, 280);
+  overlay?.classList.remove('settings-overlay--visible');
 }
 
 // ─── Perfil ───────────────────────────────────────────────────────────────────
@@ -275,21 +273,22 @@ function _syncTasksSelect() {
 
 // ─── Construcción del HTML del panel ─────────────────────────────────────────
 function _buildPanelHTML() {
-  // Overlay de fondo
+  // Overlay de fondo — siempre en el DOM, visible via clase
   const overlay = document.createElement('div');
-  overlay.id      = 'settings-overlay';
+  overlay.id        = 'settings-overlay';
   overlay.className = 'settings-overlay';
-  overlay.hidden  = true;
+  // NO se pone hidden: vive en el DOM invisible via CSS hasta que se activa
   document.body.appendChild(overlay);
 
-  // Panel lateral
+  // Panel lateral — siempre en el DOM, fuera de pantalla via transform
   const panel = document.createElement('aside');
   panel.id        = 'settings-panel';
   panel.className = 'settings-panel';
   panel.setAttribute('role', 'dialog');
   panel.setAttribute('aria-modal', 'true');
   panel.setAttribute('aria-labelledby', 'settings-panel-title');
-  panel.hidden    = true;
+  // NO se pone hidden: el panel vive siempre renderizado
+  // y se mueve fuera de pantalla con transform: translateX(100%)
 
   panel.innerHTML = `
     <div class="settings-panel__header">
