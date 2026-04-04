@@ -21,6 +21,64 @@ export function setActiveUser(name) {
   if (el) el.textContent = name;
 }
 
+/**
+ * Conecta el modal de edición de nombre de usuario.
+ * @param {function} onNameChange - Callback(newName) llamado al guardar.
+ */
+export function bindUserEdit(onNameChange) {
+  const openBtn  = document.getElementById('edit-name-btn');
+  const modal    = document.getElementById('edit-name-modal');
+  const input    = document.getElementById('edit-name-input');
+  const saveBtn  = document.getElementById('edit-name-save');
+  const closeBtn = document.getElementById('edit-name-close');
+
+  if (!openBtn || !modal) return;
+
+  function openModal() {
+    input.value = localStorage.getItem('lrhome_user') || '';
+    modal.hidden = false;
+    // Renderiza iconos Lucide del modal
+    if (window.lucide) window.lucide.createIcons({ nodes: [modal] });
+    requestAnimationFrame(() => input.focus());
+  }
+
+  function closeModal() {
+    modal.hidden = true;
+  }
+
+  function save() {
+    const name = input.value.trim();
+    if (!name) {
+      input.focus();
+      showToast('El nombre no puede estar vacío.', 'error');
+      return;
+    }
+    if (name.length > 30) {
+      showToast('El nombre no puede superar los 30 caracteres.', 'error');
+      return;
+    }
+    localStorage.setItem('lrhome_user', name);
+    setActiveUser(name);
+    if (onNameChange) onNameChange(name);
+    closeModal();
+    showToast(`Nombre cambiado a "${name}" ✓`, 'success');
+  }
+
+  openBtn.addEventListener('click', openModal);
+  closeBtn.addEventListener('click', closeModal);
+  saveBtn.addEventListener('click', save);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') save();
+    if (e.key === 'Escape') closeModal();
+  });
+
+  // Cerrar al pulsar fuera del card
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+}
+
+
 /** Cola de toasts pendientes para no solapar. */
 let toastQueue = [];
 let toastTimer = null;

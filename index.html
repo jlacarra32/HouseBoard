@@ -62,10 +62,16 @@
       <div class="app-header__logo" aria-label="L-R Home">
         L<span>-</span>R Home
       </div>
-      <div class="app-header__user">
+      <button
+        class="app-header__user"
+        id="edit-name-btn"
+        aria-label="Cambiar nombre de usuario"
+        title="Cambiar nombre"
+      >
         <i data-lucide="user" aria-hidden="true"></i>
         <span id="header-username"></span>
-      </div>
+        <i data-lucide="pencil" class="edit-name-icon" aria-hidden="true"></i>
+      </button>
     </header>
 
     <!-- Navegación horizontal (desktop) -->
@@ -143,6 +149,35 @@
     </main>
 
   </div><!-- /#app -->
+
+  <!-- Modal: cambiar nombre de usuario -->
+  <div id="edit-name-modal" class="modal-overlay" hidden aria-modal="true" role="dialog" aria-labelledby="edit-name-modal-title">
+    <div class="modal-card">
+      <div class="modal-card__header">
+        <h2 class="modal-card__title" id="edit-name-modal-title">Cambiar nombre</h2>
+        <button class="modal-card__close" id="edit-name-close" aria-label="Cerrar">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-card__body">
+        <label for="edit-name-input" class="modal-card__label">¿Cómo te llaman en casa?</label>
+        <input
+          type="text"
+          id="edit-name-input"
+          class="form-input"
+          placeholder="Tu nombre…"
+          maxlength="30"
+          autocomplete="given-name"
+        />
+      </div>
+      <div class="modal-card__footer">
+        <button class="btn btn--primary btn--full btn--pill" id="edit-name-save">
+          <i data-lucide="check" class="btn__icon"></i>
+          <span>Guardar</span>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Toast container (fuera del flujo) -->
   <div id="toast-container" role="status" aria-live="polite" aria-atomic="false"></div>

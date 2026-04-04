@@ -4,7 +4,7 @@
  * NO contiene lógica de Firestore directa.
  */
 
-import { showModule, setActiveUser, showToast } from './ui-shared.js';
+import { showModule, setActiveUser, showToast, bindUserEdit } from './ui-shared.js';
 import {
   subscribeToShoppingItems,
   addShoppingItem,
@@ -94,6 +94,11 @@ function startApp() {
   if (app) app.hidden = false;
 
   setActiveUser(currentUser);
+
+  // Modal de edición de nombre
+  bindUserEdit((newName) => {
+    currentUser = newName;
+  });
 
   // Inicializa el DOM de cada módulo
   initShoppingUI();
