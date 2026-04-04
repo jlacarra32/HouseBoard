@@ -15,7 +15,6 @@ import { setActiveUser, showToast } from './ui-shared.js';
 
 // ─── Referencias Firestore ────────────────────────────────────────────────────
 const shoppingConfigRef = doc(db, 'config', 'shopping');
-const tasksConfigRef    = doc(db, 'config', 'tasks');
 const membersConfigRef  = doc(db, 'config', 'members');
 
 // ─── Estado local de categorías/áreas ────────────────────────────────────────
@@ -25,26 +24,19 @@ export let shoppingCategories = [
   'Congelados', 'Limpieza', 'Higiene', 'Bebidas', 'Otros',
 ];
 
-/** Áreas de tareas actuales (array de strings) */
-export let taskAreas = [
-  'Cocina', 'Salón', 'Dormitorios', 'Baño',
-  'Exterior', 'Compras', 'Gestiones', 'Otros',
-];
+
 
 /** Miembros del hogar actuales (array de strings) */
 export let taskMembers = [];
 
 /** Callbacks registrados para notificar cambios a otros módulos */
 const categoriesListeners = [];
-const areasListeners      = [];
 const membersListeners    = [];
 
 export function onShoppingCategoriesChange(cb) { categoriesListeners.push(cb); }
-export function onTaskAreasChange(cb)           { areasListeners.push(cb); }
 export function onTaskMembersChange(cb)         { membersListeners.push(cb); }
 
 function notifyCategories() { categoriesListeners.forEach(cb => cb([...shoppingCategories])); }
-function notifyAreas()      { areasListeners.forEach(cb => cb([...taskAreas])); }
 function notifyMembers()    { membersListeners.forEach(cb => cb([...taskMembers])); }
 
 // ─── Suscripción en tiempo real a configuración ───────────────────────────────
@@ -61,17 +53,7 @@ export function subscribeToConfig() {
     }
   });
 
-  onSnapshot(tasksConfigRef, (snap) => {
-    if (snap.exists()) {
-      const areas = snap.data().areas;
-      if (Array.isArray(areas) && areas.length > 0) {
-        taskAreas = areas;
-        notifyAreas();
-        _renderAreaChips();
-        _syncTasksSelect();
-      }
-    }
-  });
+
 
   onSnapshot(membersConfigRef, (snap) => {
     if (snap.exists()) {
@@ -118,11 +100,7 @@ export function initSettingsPanel() {
   addCatBtn?.addEventListener('click', () => _addItem('categories'));
   addCatInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') _addItem('categories'); });
 
-  // Áreas: añadir
-  const addAreaBtn   = document.getElementById('settings-add-area-btn');
-  const addAreaInput = document.getElementById('settings-add-area-input');
-  addAreaBtn?.addEventListener('click', () => _addItem('areas'));
-  addAreaInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') _addItem('areas'); });
+
 
   // Miembros: añadir
   const addMemberBtn   = document.getElementById('settings-add-member-btn');
@@ -141,7 +119,7 @@ function openPanel() {
 
   // Renderiza chips con datos actuales
   _renderCategoryChips();
-  _renderAreaChips();
+  _renderMemberChips();
   _renderMemberChips();
 
   // Renderiza iconos Lucide del panel (solo si es la primera vez)
@@ -181,15 +159,14 @@ function _saveName() {
 // ─── Helpers categorías/áreas ─────────────────────────────────────────────────
 async function _addItem(field) {
   let isCategories = field === 'categories';
-  let isAreas = field === 'areas';
   let isMembers = field === 'members';
-  const inputId = isCategories ? 'settings-add-cat-input' : (isAreas ? 'settings-add-area-input' : 'settings-add-member-input');
+  const inputId = isCategories ? 'settings-add-cat-input' : 'settings-add-member-input';
   const input = document.getElementById(inputId);
   const value = input?.value.trim();
   if (!value) { input?.focus(); return; }
 
-  const list = isCategories ? shoppingCategories : (isAreas ? taskAreas : taskMembers);
-  const ref = isCategories ? shoppingConfigRef : (isAreas ? tasksConfigRef : membersConfigRef);
+  const list = isCategories ? shoppingCategories : taskMembers;
+  const ref = isCategories ? shoppingConfigRef : membersConfigRef;
   const updated = [...list, value];
 
   try {
@@ -204,11 +181,10 @@ async function _addItem(field) {
 
 async function _deleteItem(field, value) {
   let isCategories = field === 'categories';
-  let isAreas = field === 'areas';
   let isMembers = field === 'members';
   
-  const list = isCategories ? shoppingCategories : (isAreas ? taskAreas : taskMembers);
-  const ref = isCategories ? shoppingConfigRef : (isAreas ? tasksConfigRef : membersConfigRef);
+  const list = isCategories ? shoppingCategories : taskMembers;
+  const ref = isCategories ? shoppingConfigRef : membersConfigRef;
   const updated = list.filter(v => v !== value);
   if (updated.length === 0 && !isMembers) { // Miembros puede estar vacío
     showToast('Debe quedar al menos una opción.', 'error');
@@ -230,12 +206,7 @@ function _renderCategoryChips() {
   _bindChipEvents(container, 'categories');
 }
 
-function _renderAreaChips() {
-  const container = document.getElementById('settings-area-chips');
-  if (!container) return;
-  container.innerHTML = taskAreas.map(a => _chipHTML('areas', a)).join('');
-  _bindChipEvents(container, 'areas');
-}
+
 
 function _renderMemberChips() {
   const container = document.getElementById('settings-member-chips');
@@ -299,14 +270,7 @@ function _syncShoppingFilterBar() {
   // Re-enlaza evento de filtrado (delegado desde app.js, no necesita re-bind)
 }
 
-function _syncTasksSelect() {
-  const sel = document.getElementById('tasks-select-area');
-  if (!sel) return;
-  const current = sel.value;
-  sel.innerHTML = taskAreas
-    .map(a => `<option value="${a}"${a === current ? ' selected' : ''}>${a}</option>`)
-    .join('');
-}
+
 
 // ─── Construcción del HTML del panel ─────────────────────────────────────────
 function _buildPanelHTML() {
@@ -404,30 +368,7 @@ function _buildPanelHTML() {
         </div>
       </section>
 
-      <!-- Bloque 3: Áreas de tareas -->
-      <section class="settings-block">
-        <h3 class="settings-block__title">
-          <i data-lucide="check-square"></i>
-          Áreas de tareas
-        </h3>
-        <div class="settings-block__content">
-          <div class="settings-chips" id="settings-area-chips"></div>
-          <div class="settings-input-row settings-input-row--mt">
-            <input
-              type="text"
-              id="settings-add-area-input"
-              class="form-input"
-              placeholder="Nueva área…"
-              maxlength="40"
-              autocomplete="off"
-            />
-            <button class="btn btn--primary settings-add-btn" id="settings-add-area-btn" aria-label="Añadir área">
-              <i data-lucide="plus"></i>
-              <span>Añadir</span>
-            </button>
-          </div>
-        </div>
-      </section>
+
 
     </div>
   `;

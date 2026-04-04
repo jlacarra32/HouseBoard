@@ -376,22 +376,42 @@ body {
   to { transform: rotate(360deg); }
 }
 
-/* ─── Filter grid ───────────────────────────────────────────────────────────── */
-.filter-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 16px;
+/* ─── View Toggle ───────────────────────────────────────────────────────────── */
+.view-toggle {
+  display: flex;
+  background: var(--color-surface-2);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  gap: 4px;
+  margin-bottom: 24px;
 }
 
-.filter-grid .chip {
-  width: 100%;
+.view-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
   justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.filter-grid .chip[data-category="Todas"],
-.filter-grid .chip[data-area="Todas"] {
-  grid-column: 1 / -1;
+.view-btn--active {
+  background: var(--color-primary);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.view-btn i {
+  width: 16px;
+  height: 16px;
 }
 
 .chip {

@@ -5,7 +5,7 @@
  */
 
 import { showModule, setActiveUser, showToast } from './ui-shared.js';
-import { initSettingsPanel, subscribeToConfig, onShoppingCategoriesChange, onTaskAreasChange, onTaskMembersChange } from './ui-settings.js';
+import { initSettingsPanel, subscribeToConfig, onShoppingCategoriesChange, onTaskMembersChange } from './ui-settings.js';
 import {
   subscribeToShoppingItems,
   addShoppingItem,
@@ -41,8 +41,8 @@ import {
 let currentUser = '';
 let allShoppingItems = [];
 let allTasks = [];
-let activeShoppingCategory = 'Todas';
-let activeTaskArea = 'Todas';
+let shoppingView = localStorage.getItem('shoppingView') || 'recent';
+let tasksView = localStorage.getItem('tasksView') || 'recent';
 let unsubscribeShopping = null;
 let unsubscribeTasks = null;
 
@@ -101,35 +101,16 @@ function startApp() {
   initSettingsPanel();
   subscribeToConfig();
 
-  // Cuando las categorías cambien, sync del select + filter bar
+  // Cuando las categorías cambien, sync del select
   onShoppingCategoriesChange((cats) => {
     const sel = document.getElementById('shopping-select-cat');
     if (sel) {
       const cur = sel.value;
       sel.innerHTML = cats.map(c => `<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');
     }
-    const bar = document.getElementById('shopping-filter-bar');
-    if (bar) {
-      const active = bar.querySelector('.chip--active')?.dataset.category || 'Todas';
-      bar.innerHTML = `<button class="chip${active==='Todas'?' chip--active':''}" data-category="Todas">Todas</button>`
-        + cats.map(c => `<button class="chip${c===active?' chip--active':''}" data-category="${c}">${c}</button>`).join('');
-    }
   });
 
-  // Cuando las áreas cambien, sync del select y el filter bar
-  onTaskAreasChange((areas) => {
-    const sel = document.getElementById('tasks-select-area');
-    if (sel) {
-      const cur = sel.value;
-      sel.innerHTML = areas.map(a => `<option value="${a}"${a===cur?' selected':''}>${a}</option>`).join('');
-    }
-    const bar = document.getElementById('tasks-filter-bar');
-    if (bar) {
-      const active = bar.querySelector('.chip--active')?.dataset.area || 'Todas';
-      bar.innerHTML = `<button class="chip${active==='Todas'?' chip--active':''}" data-area="Todas">Todas</button>`
-        + areas.map(a => `<button class="chip${a===active?' chip--active':''}" data-area="${a}">${a}</button>`).join('');
-    }
-  });
+
 
   // Cuando los miembros cambien, sync del datalist
   onTaskMembersChange((members) => {
@@ -189,9 +170,10 @@ function startApp() {
         showToast('Error al limpiar la lista.', 'error');
       }
     },
-    onCategoryFilter: (category) => {
-      activeShoppingCategory = category;
-      renderShoppingItems(allShoppingItems, activeShoppingCategory);
+    onViewChange: (view) => {
+      shoppingView = view;
+      localStorage.setItem('shoppingView', view);
+      renderShoppingItems(allShoppingItems, shoppingView);
     },
   });
 
@@ -234,9 +216,10 @@ function startApp() {
         showToast('Error al limpiar las tareas.', 'error');
       }
     },
-    onAreaFilter: (area) => {
-      activeTaskArea = area;
-      renderTasks(allTasks, activeTaskArea);
+    onViewChange: (view) => {
+      tasksView = view;
+      localStorage.setItem('tasksView', view);
+      renderTasks(allTasks, tasksView);
     },
   });
 
@@ -247,7 +230,7 @@ function startApp() {
   unsubscribeShopping = subscribeToShoppingItems((items) => {
     allShoppingItems = items;
     hideShoppingSkeleton();
-    renderShoppingItems(items, activeShoppingCategory);
+    renderShoppingItems(items, shoppingView);
     const hasBought = items.some(i => i.status === 'bought');
     toggleShoppingFAB(hasBought);
   });
@@ -255,7 +238,7 @@ function startApp() {
   unsubscribeTasks = subscribeToTasks((tasks) => {
     allTasks = tasks;
     hideTasksSkeleton();
-    renderTasks(tasks, activeTaskArea);
+    renderTasks(tasks, tasksView);
     const hasDone = tasks.some(t => t.status === 'done');
     toggleTasksFAB(hasDone);
   });

@@ -4,7 +4,7 @@
  */
 
 import { showToast } from './ui-shared.js';
-import { taskAreas, taskMembers } from './ui-settings.js';
+import { taskMembers } from './ui-settings.js';
 
 /** Inyecta el HTML del módulo en el contenedor #tasks-module */
 export function initTasksUI() {
@@ -36,11 +36,7 @@ export function initTasksUI() {
             autocomplete="off"
           />
         </div>
-        <div class="form-group">
-          <select id="tasks-select-area" class="form-select">
-            ${taskAreas.map(a => `<option value="${a}">${a}</option>`).join('')}
-          </select>
-        </div>
+
         <div class="form-group">
           <input
             type="text"
@@ -63,10 +59,14 @@ export function initTasksUI() {
       </form>
     </div>
 
-    <!-- Filtros de área -->
-    <div class="filter-grid" id="tasks-filter-bar" role="group" aria-label="Filtrar por área">
-      <button class="chip chip--active" data-area="Todas">Todas</button>
-      ${taskAreas.map(a => `<button class="chip" data-area="${_escapeHTMLforAttr(a)}">${_escapeHTMLforAttr(a)}</button>`).join('')}
+    <!-- Controles de vista -->
+    <div class="view-toggle" id="tasks-view-toggle">
+      <button class="view-btn" data-view="recent">
+        <i data-lucide="clock"></i> Reciente
+      </button>
+      <button class="view-btn" data-view="person">
+        <i data-lucide="users"></i> Por persona
+      </button>
     </div>
 
     <!-- Skeleton de carga -->
@@ -92,17 +92,16 @@ export function initTasksUI() {
 /**
  * Renderiza la lista de tareas.
  * @param {Array} tasks - Todos los ítems de Firestore
- * @param {string} activeArea - Área a filtrar
+ * @param {string} view - 'recent' | 'person'
  */
-export function renderTasks(tasks, activeArea = 'Todas') {
+export function renderTasks(tasks, view = 'recent') {
   const container = document.getElementById('tasks-list');
   if (!container) return;
 
-  const filtered = activeArea === 'Todas' ? tasks : tasks.filter(t => t.area === activeArea);
-  const pending = filtered.filter(t => t.status === 'pending');
-  const done    = filtered.filter(t => t.status === 'done');
+  const pending = tasks.filter(t => t.status === 'pending');
+  const done    = tasks.filter(t => t.status === 'done');
 
-  if (filtered.length === 0) {
+  if (tasks.length === 0) {
     container.innerHTML = `
       <div class="empty-state">
         <div class="empty-state__emoji">✅</div>
@@ -115,17 +114,40 @@ export function renderTasks(tasks, activeArea = 'Todas') {
 
   let html = '';
 
-  if (pending.length > 0) {
-    html += `
-      <section class="list-section">
-        <h3 class="list-section__title">
-          Pendientes <span class="list-section__count">(${pending.length})</span>
-        </h3>
-        <ul class="item-list" role="list">
-          ${pending.map(renderTaskCard).join('')}
-        </ul>
-      </section>
-    `;
+  if (view === 'recent') {
+    if (pending.length > 0) {
+      html += `
+        <section class="list-section">
+          <h3 class="list-section__title">
+            Pendientes <span class="list-section__count">(${pending.length})</span>
+          </h3>
+          <ul class="item-list" role="list">
+            ${pending.map(renderTaskCard).join('')}
+          </ul>
+        </section>
+      `;
+    }
+  } else if (view === 'person') {
+    if (pending.length > 0) {
+      const groups = {};
+      pending.forEach(t => {
+        const person = t.assignedTo || 'Sin asignar';
+        if (!groups[person]) groups[person] = [];
+        groups[person].push(t);
+      });
+      const keys = Object.keys(groups).filter(k => k !== 'Sin asignar').sort();
+      if (groups['Sin asignar']) keys.push('Sin asignar');
+      keys.forEach(person => {
+        html += `
+          <section class="list-section">
+            <h3 class="list-section__title">${escapeHTML(person)} <span class="list-section__count">(${groups[person].length})</span></h3>
+            <ul class="item-list" role="list">
+              ${groups[person].map(renderTaskCard).join('')}
+            </ul>
+          </section>
+        `;
+      });
+    }
   }
 
   if (done.length > 0) {
@@ -173,7 +195,7 @@ function renderTaskCard(task) {
         <span class="item-card__name ${isDone ? 'item-card__name--done' : ''}">${escapeHTML(task.title)}</span>
         ${notesHtml}
         <div class="item-card__meta">
-          <span class="badge">${escapeHTML(task.area || 'Otros')}</span>
+
           <span class="item-card__by">por ${escapeHTML(task.addedBy || '')}</span>
           ${assignedInfo}
           ${doneInfo}
@@ -222,7 +244,6 @@ export function bindTasksEvents(handlers) {
       e.preventDefault();
       const titleInput = document.getElementById('tasks-input-title');
       const notesInput = document.getElementById('tasks-input-notes');
-      const areaSelect = document.getElementById('tasks-select-area');
       const assignedInput = document.getElementById('tasks-input-assigned');
       const title = titleInput?.value.trim();
       if (!title) {
@@ -239,7 +260,7 @@ export function bindTasksEvents(handlers) {
         await handlers.onAdd({
           title,
           notes: notesInput?.value.trim() || '',
-          area:  areaSelect?.value || 'Otros',
+
           assignedTo: assignedInput?.value.trim() || null,
         });
         titleInput.value = '';
@@ -274,17 +295,20 @@ export function bindTasksEvents(handlers) {
     });
   }
 
-  const filterBar = document.getElementById('tasks-filter-bar');
-  if (filterBar) {
-    filterBar.addEventListener('click', (e) => {
-      const btn = e.target.closest('.chip');
+  const viewToggle = document.getElementById('tasks-view-toggle');
+  if (viewToggle) {
+    const currentView = localStorage.getItem('tasksView') || 'recent';
+    viewToggle.querySelectorAll('.view-btn').forEach(b => {
+      b.classList.toggle('view-btn--active', b.dataset.view === currentView);
+    });
+
+    viewToggle.addEventListener('click', (e) => {
+      const btn = e.target.closest('.view-btn');
       if (!btn) return;
-
-      filterBar.querySelectorAll('.chip').forEach(c => c.classList.remove('chip--active'));
-      btn.classList.add('chip--active');
-
-      if (handlers.onAreaFilter) {
-        handlers.onAreaFilter(btn.dataset.area);
+      viewToggle.querySelectorAll('.view-btn').forEach(c => c.classList.remove('view-btn--active'));
+      btn.classList.add('view-btn--active');
+      if (handlers.onViewChange) {
+        handlers.onViewChange(btn.dataset.view);
       }
     });
   }

@@ -51,10 +51,14 @@ export function initShoppingUI() {
       </form>
     </div>
 
-    <!-- Filtros de categoría -->
-    <div class="filter-grid" id="shopping-filter-bar" role="group" aria-label="Filtrar por categoría">
-      <button class="chip chip--active" data-category="Todas">Todas</button>
-      ${shoppingCategories.map(c => `<button class="chip" data-category="${c}">${c}</button>`).join('')}
+    <!-- Controles de vista -->
+    <div class="view-toggle" id="shopping-view-toggle">
+      <button class="view-btn" data-view="recent">
+        <i data-lucide="clock"></i> Reciente
+      </button>
+      <button class="view-btn" data-view="category">
+        <i data-lucide="layout-list"></i> Por categoría
+      </button>
     </div>
 
     <!-- Skeleton de carga -->
@@ -79,22 +83,18 @@ export function initShoppingUI() {
 }
 
 /**
- * Renderiza la lista de ítems filtrados.
+ * Renderiza la lista de ítems según la vista elegida.
  * @param {Array} items - Todos los ítems de Firestore
- * @param {string} activeCategory - Categoría activa ('Todas' o una específica)
+ * @param {string} view - 'recent' | 'category'
  */
-export function renderShoppingItems(items, activeCategory = 'Todas') {
+export function renderShoppingItems(items, view = 'recent') {
   const container = document.getElementById('shopping-list');
   if (!container) return;
 
-  const filtered = activeCategory === 'Todas'
-    ? items
-    : items.filter(i => i.category === activeCategory);
+  const pending = items.filter(i => i.status === 'pending');
+  const bought  = items.filter(i => i.status === 'bought');
 
-  const pending = filtered.filter(i => i.status === 'pending');
-  const bought  = filtered.filter(i => i.status === 'bought');
-
-  if (filtered.length === 0) {
+  if (items.length === 0) {
     container.innerHTML = `
       <div class="empty-state">
         <div class="empty-state__emoji">🛒</div>
@@ -107,17 +107,38 @@ export function renderShoppingItems(items, activeCategory = 'Todas') {
 
   let html = '';
 
-  if (pending.length > 0) {
-    html += `
-      <section class="list-section">
-        <h3 class="list-section__title">
-          Por comprar <span class="list-section__count">(${pending.length})</span>
-        </h3>
-        <ul class="item-list" role="list">
-          ${pending.map(renderShoppingCard).join('')}
-        </ul>
-      </section>
-    `;
+  if (view === 'recent') {
+    if (pending.length > 0) {
+      html += `
+        <section class="list-section">
+          <h3 class="list-section__title">
+            Por comprar <span class="list-section__count">(${pending.length})</span>
+          </h3>
+          <ul class="item-list" role="list">
+            ${pending.map(renderShoppingCard).join('')}
+          </ul>
+        </section>
+      `;
+    }
+  } else if (view === 'category') {
+    if (pending.length > 0) {
+      const groups = {};
+      pending.forEach(i => {
+        const cat = i.category || 'Otros';
+        if (!groups[cat]) groups[cat] = [];
+        groups[cat].push(i);
+      });
+      Object.keys(groups).sort().forEach(cat => {
+        html += `
+          <section class="list-section">
+            <h3 class="list-section__title">${escapeHTML(cat)} <span class="list-section__count">(${groups[cat].length})</span></h3>
+            <ul class="item-list" role="list">
+              ${groups[cat].map(renderShoppingCard).join('')}
+            </ul>
+          </section>
+        `;
+      });
+    }
   }
 
   if (bought.length > 0) {
@@ -259,15 +280,23 @@ export function bindShoppingEvents(handlers) {
     });
   }
 
-  // Filtros de categoría
-  const filterBar = document.getElementById('shopping-filter-bar');
-  if (filterBar) {
-    filterBar.addEventListener('click', (e) => {
-      const chip = e.target.closest('[data-category]');
-      if (!chip) return;
-      filterBar.querySelectorAll('.chip').forEach(c => c.classList.remove('chip--active'));
-      chip.classList.add('chip--active');
-      handlers.onCategoryFilter(chip.dataset.category);
+  // Controles de Vista
+  const viewToggle = document.getElementById('shopping-view-toggle');
+  if (viewToggle) {
+    // Inicializar estado visual basado en la variable de localStorage o fallback
+    const currentView = localStorage.getItem('shoppingView') || 'recent';
+    viewToggle.querySelectorAll('.view-btn').forEach(b => {
+      b.classList.toggle('view-btn--active', b.dataset.view === currentView);
+    });
+
+    viewToggle.addEventListener('click', (e) => {
+      const btn = e.target.closest('.view-btn');
+      if (!btn) return;
+      viewToggle.querySelectorAll('.view-btn').forEach(c => c.classList.remove('view-btn--active'));
+      btn.classList.add('view-btn--active');
+      if (handlers.onViewChange) {
+        handlers.onViewChange(btn.dataset.view);
+      }
     });
   }
 }
