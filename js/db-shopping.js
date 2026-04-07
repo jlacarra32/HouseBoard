@@ -66,7 +66,8 @@ export async function toggleShoppingItem(itemId, currentStatus) {
   const newStatus = currentStatus === 'pending' ? 'bought' : 'pending';
   await updateDoc(doc(db, COLLECTION, itemId), {
     status:  newStatus,
-    boughtAt: newStatus === 'bought' ? serverTimestamp() : null,
+    boughtAt: newStatus === 'bought' ? new Date() : null,
+    boughtBy: newStatus === 'bought' ? (localStorage.getItem('lrhome_user') || 'Desconocido') : null,
   });
 }
 

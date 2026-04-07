@@ -69,8 +69,8 @@ export async function toggleTask(taskId, currentStatus, userName) {
   const newStatus = currentStatus === 'pending' ? 'done' : 'pending';
   await updateDoc(doc(db, COLLECTION, taskId), {
     status: newStatus,
-    doneAt: newStatus === 'done' ? serverTimestamp() : null,
-    doneBy: newStatus === 'done' ? (userName || 'Desconocido') : null,
+    doneAt: newStatus === 'done' ? new Date() : null,
+    doneBy: newStatus === 'done' ? (localStorage.getItem('lrhome_user') || userName || 'Desconocido') : null,
   });
 }
 
