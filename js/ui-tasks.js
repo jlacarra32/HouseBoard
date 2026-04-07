@@ -169,9 +169,6 @@ export function renderTasks(tasks, view = 'recent') {
 
 function renderTaskCard(task) {
   const isDone = task.status === 'done';
-  const doneInfo = isDone && task.doneBy
-    ? `<span class="item-card__done-by">✓ hecha por ${escapeHTML(task.doneBy)}</span>`
-    : '';
   const assignedInfo = !isDone && task.assignedTo
     ? `<span class="item-card__assigned" style="display:inline-flex; align-items:center; gap:4px; margin-left:8px; color:var(--color-primary); font-weight:600;"><i data-lucide="user" style="width:14px; height:14px;"></i> Para: ${escapeHTML(task.assignedTo)}</span>`
     : '';
@@ -193,12 +190,12 @@ function renderTaskCard(task) {
       </button>
       <div class="item-card__body">
         <span class="item-card__name ${isDone ? 'item-card__name--done' : ''}">${escapeHTML(task.title)}</span>
+        ${isDone && task.doneBy ? `<span style="display:block; font-size: 0.8rem; color: #888;">Hecho por ${escapeHTML(task.doneBy)}</span>` : ''}
         ${notesHtml}
         <div class="item-card__meta">
 
           <span class="item-card__by">por ${escapeHTML(task.addedBy || '')}</span>
           ${assignedInfo}
-          ${doneInfo}
         </div>
       </div>
       <button

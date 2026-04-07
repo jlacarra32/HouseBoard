@@ -176,6 +176,7 @@ function renderShoppingCard(item) {
       </button>
       <div class="item-card__body">
         <span class="item-card__name ${isBought ? 'item-card__name--done' : ''}">${escapeHTML(item.name)}</span>
+        ${isBought && item.boughtBy ? `<span style="display:block; font-size: 0.8rem; color: #888;">Comprado por ${escapeHTML(item.boughtBy)}</span>` : ''}
         <div class="item-card__meta">
           ${item.quantity ? `<span class="item-card__qty">${escapeHTML(item.quantity)}</span>` : ''}
           <span class="badge">${escapeHTML(item.category || 'Otros')}</span>
