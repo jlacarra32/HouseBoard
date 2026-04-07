@@ -19,3 +19,6 @@ npm-debug.log*
 # Build output
 dist/
 .vercel/
+
+# Credenciales locales de Firebase — NUNCA subir a GitHub
+firebase-config.js
