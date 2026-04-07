@@ -19,16 +19,11 @@ import {
   where,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
-const COLLECTION = 'tasks';
+const getCollection = () => `homes/${localStorage.getItem('lrhome_homeId')}/tasks`;
 
-/**
- * Suscripción en tiempo real a todas las tareas del hogar.
- * @param {function} callback - Recibe array de documentos con id incluido.
- * @returns {function} unsubscribe
- */
 export function subscribeToTasks(callback) {
   const q = query(
-    collection(db, COLLECTION),
+    collection(db, getCollection()),
     orderBy('createdAt', 'desc')
   );
   return onSnapshot(q, (snapshot) => {
@@ -37,17 +32,11 @@ export function subscribeToTasks(callback) {
   });
 }
 
-/**
- * Añade una tarea al hogar.
- * @param {object} taskData - { title, notes, addedBy, assignedTo }
- */
 export async function addTask(taskData) {
   const title = (taskData.title || '').trim();
-  if (!title || title.length > 120) {
-    throw new Error('El título de la tarea es obligatorio (máx. 120 caracteres).');
-  }
+  if (!title || title.length > 120) throw new Error('El título es obligatorio.');
   const notes = (taskData.notes || '').trim().slice(0, 300);
-  await addDoc(collection(db, COLLECTION), {
+  await addDoc(collection(db, getCollection()), {
     title,
     notes,
     addedBy:    taskData.addedBy    || 'Desconocido',
@@ -59,37 +48,21 @@ export async function addTask(taskData) {
   });
 }
 
-/**
- * Alterna el estado de una tarea entre 'pending' y 'done'.
- * @param {string} taskId
- * @param {string} currentStatus - 'pending' | 'done'
- * @param {string} userName - Nombre de quien completa la tarea
- */
 export async function toggleTask(taskId, currentStatus, userName) {
   const newStatus = currentStatus === 'pending' ? 'done' : 'pending';
-  await updateDoc(doc(db, COLLECTION, taskId), {
+  await updateDoc(doc(db, getCollection(), taskId), {
     status: newStatus,
     doneAt: newStatus === 'done' ? new Date() : null,
     doneBy: newStatus === 'done' ? (localStorage.getItem('lrhome_user') || userName || 'Desconocido') : null,
   });
 }
 
-/**
- * Elimina una tarea por su ID.
- * @param {string} taskId
- */
 export async function deleteTask(taskId) {
-  await deleteDoc(doc(db, COLLECTION, taskId));
+  await deleteDoc(doc(db, getCollection(), taskId));
 }
 
-/**
- * Elimina en WriteBatch todas las tareas con status 'done'.
- */
 export async function clearDoneTasks() {
-  const q = query(
-    collection(db, COLLECTION),
-    where('status', '==', 'done')
-  );
+  const q = query(collection(db, getCollection()), where('status', '==', 'done'));
   const snapshot = await getDocs(q);
   if (snapshot.empty) return;
   const batch = writeBatch(db);

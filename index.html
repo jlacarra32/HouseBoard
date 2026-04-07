@@ -41,7 +41,8 @@
     <h1 class="welcome__logo">L<span>-</span>R Home</h1>
     <p class="welcome__subtitle">Tu hogar, organizado.</p>
 
-    <div class="welcome__card">
+    <!-- Paso 1: Pedir nombre -->
+    <div class="welcome__card" id="welcome-step-1">
       <div>
         <label for="welcome-input">¿Cómo te llaman en casa?</label>
         <input
@@ -53,9 +54,52 @@
           autocomplete="given-name"
         />
       </div>
-      <button id="welcome-btn" class="btn btn--primary btn--full btn--pill">
-        Entrar
+      <button id="welcome-btn-next" class="btn btn--primary btn--full btn--pill">
+        Siguiente
       </button>
+    </div>
+
+    <!-- Paso 2: Crear o Unirse a Casa -->
+    <div class="welcome__card" id="welcome-step-2" hidden>
+      <div id="welcome-home-options">
+        <button id="welcome-btn-create-view" class="btn btn--primary btn--full btn--pill" style="margin-bottom: 10px;">
+          Crear casa
+        </button>
+        <button id="welcome-btn-join-view" class="btn btn--secondary btn--full btn--pill">
+          Unirse a casa
+        </button>
+      </div>
+
+      <div id="welcome-create-form" hidden>
+        <label for="welcome-home-name">Nombre de la nueva casa</label>
+        <input
+          type="text"
+          id="welcome-home-name"
+          class="form-input"
+          placeholder="Ej: Villa L-R"
+          maxlength="40"
+        />
+        <button id="welcome-btn-create" class="btn btn--primary btn--full btn--pill" style="margin-top:10px;">
+          Crear y entrar
+        </button>
+        <button class="welcome-btn-back btn btn--secondary btn--full btn--pill" style="margin-top:10px;">Volver</button>
+      </div>
+
+      <div id="welcome-join-form" hidden>
+        <label for="welcome-home-code">Código de la casa (6 caracteres)</label>
+        <input
+          type="text"
+          id="welcome-home-code"
+          class="form-input"
+          placeholder="Ej: X7A9P2"
+          maxlength="6"
+          style="text-transform: uppercase;"
+        />
+        <button id="welcome-btn-join" class="btn btn--primary btn--full btn--pill" style="margin-top:10px;">
+          Unirse y entrar
+        </button>
+        <button class="welcome-btn-back btn btn--secondary btn--full btn--pill" style="margin-top:10px;">Volver</button>
+      </div>
     </div>
   </div>
 
@@ -170,6 +214,7 @@
 
   <!-- Scripts ES Modules (orden de dependencias) -->
   <script type="module" src="./js/firebase-config.js"></script>
+  <script type="module" src="./js/db-homes.js"></script>
   <script type="module" src="./js/db-shopping.js"></script>
   <script type="module" src="./js/db-tasks.js"></script>
   <script type="module" src="./js/ui-shared.js"></script>

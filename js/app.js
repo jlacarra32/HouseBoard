@@ -37,8 +37,11 @@ import {
   bindTasksEvents,
 } from './ui-tasks.js';
 
+import { createHome, joinHome } from './db-homes.js';
+
 // ─── Estado interno ───────────────────────────────────────────────────────────
 let currentUser = '';
+let currentHomeId = '';
 let allShoppingItems = [];
 let allTasks = [];
 let shoppingView = localStorage.getItem('shoppingView') || 'recent';
@@ -49,8 +52,9 @@ let unsubscribeTasks = null;
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   currentUser = localStorage.getItem('lrhome_user') || '';
+  currentHomeId = localStorage.getItem('lrhome_homeId') || '';
 
-  if (currentUser) {
+  if (currentUser && currentHomeId) {
     startApp();
   } else {
     showWelcomeScreen();
@@ -59,34 +63,81 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function showWelcomeScreen() {
   const welcome = document.getElementById('welcome-screen');
-  const app     = document.getElementById('app');
+  const app = document.getElementById('app');
   if (welcome) welcome.hidden = false;
-  if (app)     app.hidden     = true;
+  if (app) app.hidden = true;
 
-  const btn   = document.getElementById('welcome-btn');
-  const input = document.getElementById('welcome-input');
-  if (btn && input) {
-    btn.addEventListener('click', handleWelcomeSubmit);
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') handleWelcomeSubmit();
+  if (currentUser) {
+    document.getElementById('welcome-step-1').hidden = true;
+    document.getElementById('welcome-step-2').hidden = false;
+  }
+
+  // Paso 1: Pedir nombre
+  const btnNext = document.getElementById('welcome-btn-next');
+  const inputName = document.getElementById('welcome-input');
+  
+  if (btnNext && inputName) {
+    if (currentUser) inputName.value = currentUser;
+    btnNext.addEventListener('click', () => {
+      const name = inputName.value.trim();
+      if (!name || name.length > 30) return showToast('Escribe un nombre válido (máx 30).', 'error');
+      
+      currentUser = name;
+      localStorage.setItem('lrhome_user', name);
+      document.getElementById('welcome-step-1').hidden = true;
+      document.getElementById('welcome-step-2').hidden = false;
     });
   }
+
+  // Paso 2: Crear o Unirse a Casa
+  document.getElementById('welcome-btn-create-view').addEventListener('click', () => {
+    document.getElementById('welcome-home-options').hidden = true;
+    document.getElementById('welcome-create-form').hidden = false;
+  });
+
+  document.getElementById('welcome-btn-join-view').addEventListener('click', () => {
+    document.getElementById('welcome-home-options').hidden = true;
+    document.getElementById('welcome-join-form').hidden = false;
+  });
+
+  document.querySelectorAll('.welcome-btn-back').forEach(b => b.addEventListener('click', () => {
+    document.getElementById('welcome-create-form').hidden = true;
+    document.getElementById('welcome-join-form').hidden = true;
+    document.getElementById('welcome-home-options').hidden = false;
+  }));
+
+  const btnCreate = document.getElementById('welcome-btn-create');
+  const inputHomeName = document.getElementById('welcome-home-name');
+  btnCreate.addEventListener('click', async () => {
+    const homeName = inputHomeName.value.trim();
+    if (!homeName) return showToast('Nombre de casa inválido.', 'error');
+    try {
+      const { homeId, code } = await createHome(homeName, currentUser);
+      finishWelcome(homeId);
+      showToast(`¡Casa creada! Código: ${code}`, 'success');
+    } catch (e) { showToast(e.message, 'error'); }
+  });
+
+  const btnJoin = document.getElementById('welcome-btn-join');
+  const inputHomeCode = document.getElementById('welcome-home-code');
+  btnJoin.addEventListener('click', async () => {
+    const code = inputHomeCode.value.trim().toUpperCase();
+    if (code.length !== 6) return showToast('Código inválido.', 'error');
+    try {
+      const homeId = await joinHome(code, currentUser);
+      finishWelcome(homeId);
+    } catch (e) { showToast(e.message, 'error'); }
+  });
 }
 
-function handleWelcomeSubmit() {
-  const input = document.getElementById('welcome-input');
-  const name = input?.value.trim();
-  if (!name) {
-    showToast('Escribe tu nombre para continuar.', 'error');
-    input?.focus();
-    return;
+function finishWelcome(homeId) {
+  currentHomeId = homeId;
+  localStorage.setItem('lrhome_homeId', homeId);
+  const homes = JSON.parse(localStorage.getItem('lrhome_homes') || '[]');
+  if (!homes.includes(homeId)) {
+    homes.push(homeId);
+    localStorage.setItem('lrhome_homes', JSON.stringify(homes));
   }
-  if (name.length > 30) {
-    showToast('El nombre no puede superar los 30 caracteres.', 'error');
-    return;
-  }
-  currentUser = name;
-  localStorage.setItem('lrhome_user', name);
   document.getElementById('welcome-screen').hidden = true;
   startApp();
 }

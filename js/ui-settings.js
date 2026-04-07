@@ -1,35 +1,24 @@
-/**
- * ui-settings.js
- * Panel de ajustes: perfil de usuario, categorías de compra y áreas de tareas.
- * Lee y escribe en Firestore colección `config`, documentos `shopping` y `tasks`.
- */
-
 import { db } from './firebase-config.js';
 import {
   doc,
   getDoc,
   setDoc,
+  updateDoc,
   onSnapshot,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { setActiveUser, showToast } from './ui-shared.js';
+import { getHomesForUser } from './db-homes.js';
 
-// ─── Referencias Firestore ────────────────────────────────────────────────────
-const shoppingConfigRef = doc(db, 'config', 'shopping');
-const membersConfigRef  = doc(db, 'config', 'members');
+const getHomeRef = () => doc(db, 'homes', localStorage.getItem('lrhome_homeId'));
+const getShoppingConfigRef = () => doc(db, 'homes', localStorage.getItem('lrhome_homeId'), 'config', 'shopping');
+const getMembersConfigRef  = () => doc(db, 'homes', localStorage.getItem('lrhome_homeId'), 'config', 'members');
 
-// ─── Estado local de categorías/áreas ────────────────────────────────────────
-/** Categorías de compra actuales (array de strings) */
 export let shoppingCategories = [
   'Fruta y Verdura', 'Lácteos', 'Carnicería', 'Panadería',
   'Congelados', 'Limpieza', 'Higiene', 'Bebidas', 'Otros',
 ];
 
-
-
-/** Miembros del hogar actuales (array de strings) */
 export let taskMembers = [];
-
-/** Callbacks registrados para notificar cambios a otros módulos */
 const categoriesListeners = [];
 const membersListeners    = [];
 
@@ -39,9 +28,8 @@ export function onTaskMembersChange(cb)         { membersListeners.push(cb); }
 function notifyCategories() { categoriesListeners.forEach(cb => cb([...shoppingCategories])); }
 function notifyMembers()    { membersListeners.forEach(cb => cb([...taskMembers])); }
 
-// ─── Suscripción en tiempo real a configuración ───────────────────────────────
 export function subscribeToConfig() {
-  onSnapshot(shoppingConfigRef, (snap) => {
+  onSnapshot(getShoppingConfigRef(), (snap) => {
     if (snap.exists()) {
       const cats = snap.data().categories;
       if (Array.isArray(cats) && cats.length > 0) {
@@ -53,9 +41,7 @@ export function subscribeToConfig() {
     }
   });
 
-
-
-  onSnapshot(membersConfigRef, (snap) => {
+  onSnapshot(getMembersConfigRef(), (snap) => {
     if (snap.exists()) {
       const members = snap.data().members;
       if (Array.isArray(members)) {
@@ -65,9 +51,18 @@ export function subscribeToConfig() {
       }
     }
   });
+
+  onSnapshot(getHomeRef(), (snap) => {
+    if (snap.exists()) {
+      const data = snap.data();
+      const n = document.getElementById('settings-home-name');
+      const c = document.getElementById('settings-home-code');
+      if (n) n.value = data.name || '';
+      if (c) c.innerText = data.code || '---';
+    }
+  });
 }
 
-// ─── Inicialización del panel ─────────────────────────────────────────────────
 export function initSettingsPanel() {
   _buildPanelHTML();
 
@@ -83,52 +78,69 @@ export function initSettingsPanel() {
   overlay?.addEventListener('click', closePanel);
 
   document.addEventListener('keydown', (e) => {
-    const panel = document.getElementById('settings-panel');
-    if (e.key === 'Escape' && panel?.classList.contains('settings-panel--open')) closePanel();
+    const p = document.getElementById('settings-panel');
+    if (e.key === 'Escape' && p?.classList.contains('settings-panel--open')) closePanel();
   });
 
-  // Perfil: guardar nombre
   const saveNameBtn = document.getElementById('settings-save-name');
   saveNameBtn?.addEventListener('click', _saveName);
   document.getElementById('settings-name-input')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') _saveName();
   });
 
-  // Categorías: añadir
+  const btnSaveHome = document.getElementById('settings-save-home');
+  btnSaveHome?.addEventListener('click', async () => {
+    const val = document.getElementById('settings-home-name')?.value.trim();
+    if (!val) return showToast('Nombre inválido', 'error');
+    try {
+      await updateDoc(getHomeRef(), { name: val });
+      showToast('Casa actualizada', 'success');
+    } catch (e) { showToast('Error', 'error'); }
+  });
+
+  const sel = document.getElementById('settings-home-select');
+  sel?.addEventListener('change', (e) => {
+    localStorage.setItem('lrhome_homeId', e.target.value);
+    window.location.reload();
+  });
+
   const addCatBtn   = document.getElementById('settings-add-cat-btn');
   const addCatInput = document.getElementById('settings-add-cat-input');
   addCatBtn?.addEventListener('click', () => _addItem('categories'));
   addCatInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') _addItem('categories'); });
 
-
-
-  // Miembros: añadir
   const addMemberBtn   = document.getElementById('settings-add-member-btn');
   const addMemberInput = document.getElementById('settings-add-member-input');
   addMemberBtn?.addEventListener('click', () => _addItem('members'));
   addMemberInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') _addItem('members'); });
 }
 
-function openPanel() {
+async function openPanel() {
   const panel   = document.getElementById('settings-panel');
   const overlay = document.getElementById('settings-overlay');
   const input   = document.getElementById('settings-name-input');
 
-  // Precarga nombre actual
   if (input) input.value = localStorage.getItem('lrhome_user') || '';
 
-  // Renderiza chips con datos actuales
   _renderCategoryChips();
   _renderMemberChips();
-  _renderMemberChips();
 
-  // Renderiza iconos Lucide del panel (solo si es la primera vez)
   if (window.lucide) window.lucide.createIcons({ nodes: [panel] });
 
-  // Activa overlay y panel via clases — sin tocar hidden/display
-  // para que el compositing layer ya exista y la transición sea fluida
   overlay?.classList.add('settings-overlay--visible');
   panel?.classList.add('settings-panel--open');
+
+  const sw = document.getElementById('settings-homes-switcher');
+  const sel = document.getElementById('settings-home-select');
+  try {
+    const homes = await getHomesForUser(localStorage.getItem('lrhome_user'));
+    if (homes && homes.length > 1) {
+      if (sw) sw.style.display = 'block';
+      if (sel) {
+        sel.innerHTML = homes.map(h => `<option value="${h.id}" ${h.id === localStorage.getItem('lrhome_homeId') ? 'selected' : ''}>${_escapeHTML(h.name)}</option>`).join('');
+      }
+    }
+  } catch (e) { console.error('Error load homes', e); }
 }
 
 function closePanel() {
@@ -166,7 +178,7 @@ async function _addItem(field) {
   if (!value) { input?.focus(); return; }
 
   const list = isCategories ? shoppingCategories : taskMembers;
-  const ref = isCategories ? shoppingConfigRef : membersConfigRef;
+  const ref = isCategories ? getShoppingConfigRef() : getMembersConfigRef();
   const updated = [...list, value];
 
   try {
@@ -184,7 +196,7 @@ async function _deleteItem(field, value) {
   let isMembers = field === 'members';
   
   const list = isCategories ? shoppingCategories : taskMembers;
-  const ref = isCategories ? shoppingConfigRef : membersConfigRef;
+  const ref = isCategories ? getShoppingConfigRef() : getMembersConfigRef();
   const updated = list.filter(v => v !== value);
   if (updated.length === 0 && !isMembers) { // Miembros puede estar vacío
     showToast('Debe quedar al menos una opción.', 'error');
@@ -300,6 +312,37 @@ function _buildPanelHTML() {
     </div>
 
     <div class="settings-panel__body">
+      <!-- Bloque 0: Mi casa -->
+      <section class="settings-block">
+        <h3 class="settings-block__title">
+          <i data-lucide="home"></i>
+          Mi casa
+        </h3>
+        <div class="settings-block__content">
+          <label class="settings-label" for="settings-home-name">Nombre de la casa</label>
+          <div class="settings-input-row">
+            <input
+              type="text"
+              id="settings-home-name"
+              class="form-input"
+              maxlength="40"
+            />
+            <button class="btn btn--primary settings-save-btn" id="settings-save-home" aria-label="Guardar nombre">
+              <i data-lucide="check"></i>
+              <span>Guardar</span>
+            </button>
+          </div>
+          
+          <p style="margin-top: 10px; font-size: 0.9rem; color: var(--color-text-light);">
+            Código para invitar a otros: <strong id="settings-home-code" style="color: var(--color-text);">---</strong>
+          </p>
+
+          <div id="settings-homes-switcher" style="margin-top: 15px; display: none;">
+            <label class="settings-label">Cambiar de casa activa</label>
+            <select id="settings-home-select" class="form-select" style="margin-top: 4px;"></select>
+          </div>
+        </div>
+      </section>
 
       <!-- Bloque 1: Tu perfil -->
       <section class="settings-block">
