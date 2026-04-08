@@ -991,6 +991,7 @@ body {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.28s ease;
+  will-change: opacity;
 }
 
 .settings-overlay--visible {
@@ -1009,8 +1010,8 @@ body {
   box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
-  /* siempre en el DOM, fuera de pantalla cuando no está abierto */
-  transform: translateX(100%);
+  /* GPU accelerated transform */
+  transform: translate3d(100%, 0, 0);
   transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: transform;
   overflow: hidden;
@@ -1019,7 +1020,7 @@ body {
 }
 
 .settings-panel--open {
-  transform: translateX(0);
+  transform: translate3d(0, 0, 0);
   pointer-events: auto; /* activa interacción cuando es visible */
 }
 
