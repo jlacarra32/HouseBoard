@@ -6,7 +6,7 @@ import {
   updateDoc,
   onSnapshot,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-import { setActiveUser, showToast } from './ui-shared.js';
+import { setActiveUser, showToast, showCustomPrompt } from './ui-shared.js';
 import { getHomesForUser, createHome, joinHome } from './db-homes.js';
 
 const getHomeRef = () => doc(db, 'homes', localStorage.getItem('lrhome_homeId'));
@@ -104,7 +104,7 @@ export function initSettingsPanel() {
   });
 
   document.getElementById('settings-btn-create-home')?.addEventListener('click', async () => {
-    const name = prompt('Nombre de la nueva casa:');
+    const name = await showCustomPrompt('Nueva casa', 'Nombre de la nueva casa...', 40);
     if(name && name.trim()) {
       try {
         const { homeId } = await createHome(name.trim(), localStorage.getItem('lrhome_user'));
@@ -118,7 +118,7 @@ export function initSettingsPanel() {
   });
 
   document.getElementById('settings-btn-join-home')?.addEventListener('click', async () => {
-    const code = prompt('Código de la casa (6 caracteres):');
+    const code = await showCustomPrompt('Unirse a casa', 'Código de 6 caracteres...', 6);
     if(code && code.trim().length === 6) {
       try {
         const homeId = await joinHome(code.trim().toUpperCase(), localStorage.getItem('lrhome_user'));

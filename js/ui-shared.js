@@ -117,3 +117,68 @@ export function showToast(message, type = 'success') {
     toast.addEventListener('transitionend', () => toast.remove(), { once: true });
   }, 2500);
 }
+
+/**
+ * Muestra un prompt customizado como promesa, reemplazando window.prompt.
+ * @param {string} title Título del modal.
+ * @param {string} placeholder Placeholder para el input.
+ * @param {number} maxLength Longitud máxima (opcional).
+ * @returns {Promise<string|null>} Devuelve el texto introducido o null si cancela.
+ */
+export function showCustomPrompt(title, placeholder = '', maxLength = 40) {
+  return new Promise((resolve) => {
+    // Si ya hay uno abierto, cerramos el previo
+    const existing = document.getElementById('custom-prompt-modal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'custom-prompt-modal';
+    overlay.className = 'modal-overlay';
+    
+    overlay.innerHTML = `
+      <div class="modal-card">
+        <div class="modal-card__header" style="margin-bottom: 16px;">
+          <h3 class="modal-card__title">\${title}</h3>
+        </div>
+        <div style="padding: 0 20px 20px;">
+          <input type="text" class="form-input" id="custom-prompt-input" placeholder="\${placeholder}" maxlength="\${maxLength}" autocomplete="off" style="margin-bottom: 20px;" />
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn--full" id="custom-prompt-cancel" style="background: var(--color-surface-2); color: var(--color-text);">Cancelar</button>
+            <button class="btn btn--primary btn--full" id="custom-prompt-confirm">Confirmar</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const input = document.getElementById('custom-prompt-input');
+    const btnCancel = document.getElementById('custom-prompt-cancel');
+    const btnConfirm = document.getElementById('custom-prompt-confirm');
+
+    requestAnimationFrame(() => input.focus());
+
+    function close(value) {
+      overlay.remove();
+      resolve(value);
+    }
+
+    btnCancel.addEventListener('click', () => close(null));
+    btnConfirm.addEventListener('click', () => {
+      const val = input.value.trim();
+      close(val || null);
+    });
+    
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) close(null);
+    });
+    
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const val = input.value.trim();
+        close(val || null);
+      }
+      if (e.key === 'Escape') close(null);
+    });
+  });
+}
