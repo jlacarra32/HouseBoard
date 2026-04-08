@@ -7,7 +7,7 @@ import {
   onSnapshot,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { setActiveUser, showToast } from './ui-shared.js';
-import { getHomesForUser } from './db-homes.js';
+import { getHomesForUser, createHome, joinHome } from './db-homes.js';
 
 const getHomeRef = () => doc(db, 'homes', localStorage.getItem('lrhome_homeId'));
 const getShoppingConfigRef = () => doc(db, 'homes', localStorage.getItem('lrhome_homeId'), 'config', 'shopping');
@@ -57,8 +57,13 @@ export function subscribeToConfig() {
       const data = snap.data();
       const n = document.getElementById('settings-home-name');
       const c = document.getElementById('settings-home-code');
+      const headerName = document.getElementById('header-home-name');
+      
       if (n) n.value = data.name || '';
       if (c) c.innerText = data.code || '---';
+      if (headerName && data.name) {
+        headerName.innerText = ` • ${data.name}`;
+      }
     }
   });
 }
@@ -98,10 +103,34 @@ export function initSettingsPanel() {
     } catch (e) { showToast('Error', 'error'); }
   });
 
-  const sel = document.getElementById('settings-home-select');
-  sel?.addEventListener('change', (e) => {
-    localStorage.setItem('lrhome_homeId', e.target.value);
-    window.location.reload();
+  document.getElementById('settings-btn-create-home')?.addEventListener('click', async () => {
+    const name = prompt('Nombre de la nueva casa:');
+    if(name && name.trim()) {
+      try {
+        const { homeId } = await createHome(name.trim(), localStorage.getItem('lrhome_user'));
+        const homes = JSON.parse(localStorage.getItem('lrhome_homes') || '[]');
+        homes.push(homeId);
+        localStorage.setItem('lrhome_homes', JSON.stringify(homes));
+        localStorage.setItem('lrhome_homeId', homeId);
+        window.location.reload();
+      } catch(e) { showToast(e.message, 'error'); }
+    }
+  });
+
+  document.getElementById('settings-btn-join-home')?.addEventListener('click', async () => {
+    const code = prompt('Código de la casa (6 caracteres):');
+    if(code && code.trim().length === 6) {
+      try {
+        const homeId = await joinHome(code.trim().toUpperCase(), localStorage.getItem('lrhome_user'));
+        const homes = JSON.parse(localStorage.getItem('lrhome_homes') || '[]');
+        if(!homes.includes(homeId)) homes.push(homeId);
+        localStorage.setItem('lrhome_homes', JSON.stringify(homes));
+        localStorage.setItem('lrhome_homeId', homeId);
+        window.location.reload();
+      } catch(e) { showToast(e.message, 'error'); }
+    } else if (code) {
+      showToast('Código inválido.', 'error');
+    }
   });
 
   const addCatBtn   = document.getElementById('settings-add-cat-btn');
@@ -130,15 +159,25 @@ async function openPanel() {
   overlay?.classList.add('settings-overlay--visible');
   panel?.classList.add('settings-panel--open');
 
-  const sw = document.getElementById('settings-homes-switcher');
-  const sel = document.getElementById('settings-home-select');
+  const listEl = document.getElementById('settings-homes-list');
   try {
     const homes = await getHomesForUser(localStorage.getItem('lrhome_user'));
-    if (homes && homes.length > 1) {
-      if (sw) sw.style.display = 'block';
-      if (sel) {
-        sel.innerHTML = homes.map(h => `<option value="${h.id}" ${h.id === localStorage.getItem('lrhome_homeId') ? 'selected' : ''}>${_escapeHTML(h.name)}</option>`).join('');
-      }
+    if (homes && listEl) {
+      listEl.innerHTML = homes.map(h => `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:var(--color-surface-2); padding:8px 12px; border-radius:var(--radius-sm);">
+          <strong>${_escapeHTML(h.name)}</strong>
+          ${h.id === localStorage.getItem('lrhome_homeId') 
+            ? '<span style="font-size:0.8rem; color:var(--color-text-muted);">Activa</span>' 
+            : `<button class="btn btn--primary settings-switch-home" data-id="${h.id}" style="padding:4px 12px; font-size:0.75rem; height:auto; min-height:unset;">Cambiar</button>`}
+        </div>
+      `).join('');
+      
+      listEl.querySelectorAll('.settings-switch-home').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          localStorage.setItem('lrhome_homeId', e.target.dataset.id);
+          window.location.reload();
+        });
+      });
     }
   } catch (e) { console.error('Error load homes', e); }
 }
@@ -312,14 +351,14 @@ function _buildPanelHTML() {
     </div>
 
     <div class="settings-panel__body">
-      <!-- Bloque 0: Mi casa -->
+      <!-- Bloque 0: Mis casas -->
       <section class="settings-block">
         <h3 class="settings-block__title">
           <i data-lucide="home"></i>
-          Mi casa
+          Mis casas
         </h3>
         <div class="settings-block__content">
-          <label class="settings-label" for="settings-home-name">Nombre de la casa</label>
+          <label class="settings-label" for="settings-home-name">Nombre de la casa actual</label>
           <div class="settings-input-row">
             <input
               type="text"
@@ -337,9 +376,11 @@ function _buildPanelHTML() {
             Código para invitar a otros: <strong id="settings-home-code" style="color: var(--color-text);">---</strong>
           </p>
 
-          <div id="settings-homes-switcher" style="margin-top: 15px; display: none;">
-            <label class="settings-label">Cambiar de casa activa</label>
-            <select id="settings-home-select" class="form-select" style="margin-top: 4px;"></select>
+          <div id="settings-homes-list" style="margin-top: 15px; display: flex; flex-direction: column; gap: 8px;"></div>
+          
+          <div style="display:flex; gap:8px; margin-top: 12px;">
+             <button id="settings-btn-create-home" class="btn btn--secondary btn--full" style="padding:8px; font-size:0.8rem; background: var(--color-surface-2); border-radius: var(--radius-sm);">Crear nueva casa</button>
+             <button id="settings-btn-join-home" class="btn btn--secondary btn--full" style="padding:8px; font-size:0.8rem; background: var(--color-surface-2); border-radius: var(--radius-sm);">Unirse con código</button>
           </div>
         </div>
       </section>

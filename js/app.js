@@ -147,6 +147,19 @@ function startApp() {
   if (app) app.hidden = false;
 
   setActiveUser(currentUser);
+  
+  // Actualizar nombre de la casa en el header según se solicitó
+  try {
+    const homeId = localStorage.getItem('lrhome_homeId');
+    if (homeId) {
+      const homesDb = JSON.parse(localStorage.getItem('lrhome_homes') || '[]');
+      const activeHome = homesDb.find(h => h && typeof h === 'object' && (h.id === homeId || h.homeId === homeId));
+      if (activeHome && activeHome.name) {
+        const headerName = document.getElementById('header-home-name');
+        if (headerName) headerName.innerText = ` • ${activeHome.name}`;
+      }
+    }
+  } catch(e) {}
 
   // Panel de ajustes (settings)
   initSettingsPanel();
