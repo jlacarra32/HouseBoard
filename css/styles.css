@@ -525,16 +525,6 @@ body {
   transition: stroke 0.2s ease, transform 0.2s ease;
 }
 
-.item-card__check:hover {
-  background: var(--color-primary-pale);
-  border-color: var(--color-primary-light);
-}
-
-.item-card__check:hover .check-icon {
-  stroke: var(--color-primary);
-  transform: scale(1.1);
-}
-
 .item-card__check--done {
   background: var(--color-primary);
   border-color: var(--color-primary);
@@ -630,10 +620,6 @@ body {
   height: 18px;
 }
 
-.item-card__delete:hover {
-  color: var(--color-danger);
-  background: var(--color-danger-light);
-}
 
 /* ─── Empty state ────────────────────────────────────────────────────────────── */
 .empty-state {
@@ -865,14 +851,30 @@ body {
     bottom: 40px;
   }
 
-  /* Hover en tarjetas */
+  /* Formularios en 2 columnas */
+  .form-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (hover: hover) {
   .item-card:hover {
     box-shadow: var(--shadow-md);
   }
 
-  /* Formularios en 2 columnas */
-  .form-row {
-    grid-template-columns: 1fr 1fr;
+  .item-card__check:hover {
+    background: var(--color-primary-pale);
+    border-color: var(--color-primary-light);
+  }
+
+  .item-card__check:hover .check-icon {
+    stroke: var(--color-primary);
+    transform: scale(1.1);
+  }
+
+  .item-card__delete:hover {
+    color: var(--color-danger);
+    background: var(--color-danger-light);
   }
 }
 

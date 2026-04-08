@@ -15,10 +15,217 @@ const messaging = admin.messaging();
 const APP_TITLE = "HouseBoard";
 const APP_LINK = "/";
 const APP_ICON = "/assets/icon.png";
+const NOTIFICATION_DEBOUNCE_MS = 20_000;
+const NOTIFICATION_LOCK_MS = 60_000;
 const INVALID_TOKEN_ERRORS = new Set([
   "messaging/invalid-registration-token",
   "messaging/registration-token-not-registered",
 ]);
+
+function wait(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function getPendingNotificationRef(homeId, type, userName) {
+  const safeUserName = encodeURIComponent(userName || "anonymous");
+  return db.doc(`homes/${homeId}/notificationDebounce/${type}__${safeUserName}`);
+}
+
+function buildGroupedNotificationBody(type, actorName, pendingEntries) {
+  const actor = actorName || "Alguien";
+  const count = pendingEntries.length;
+
+  if (type === "shopping-created") {
+    if (count <= 1) {
+      const itemName = pendingEntries[0]?.label || "un producto";
+      return `${actor} añadió ${itemName} a la compra.`;
+    }
+
+    return `${actor} añadió ${count} productos a la compra.`;
+  }
+
+  if (type === "task-created") {
+    if (count <= 1) {
+      const taskTitle = pendingEntries[0]?.label || "una tarea";
+      return `${actor} añadió la tarea ${taskTitle}.`;
+    }
+
+    return `${actor} añadió ${count} tareas.`;
+  }
+
+  if (type === "shopping-bought") {
+    if (count <= 1) {
+      const itemName = pendingEntries[0]?.label || "un producto";
+      return `${actor} compró ${itemName}.`;
+    }
+
+    return `${actor} compró ${count} productos.`;
+  }
+
+  if (type === "task-done") {
+    if (count <= 1) {
+      const taskTitle = pendingEntries[0]?.label || "una tarea";
+      return `${actor} completó ${taskTitle}.`;
+    }
+
+    return `${actor} completó ${count} tareas.`;
+  }
+
+  return `${actor} realizó una actualización.`;
+}
+
+async function queueGroupedNotification({
+  homeId,
+  excludeUserName,
+  actorName,
+  entryLabel,
+  resourceId,
+  type,
+}) {
+  const queueRef = getPendingNotificationRef(homeId, type, excludeUserName || actorName);
+  const queuedAt = admin.firestore.Timestamp.now();
+
+  await db.runTransaction(async (transaction) => {
+    const queueSnapshot = await transaction.get(queueRef);
+    const queueData = queueSnapshot.exists ? queueSnapshot.data() : {};
+    const pendingEntries = Array.isArray(queueData.pendingEntries)
+      ? [...queueData.pendingEntries]
+      : [];
+
+    pendingEntries.push({
+      label: entryLabel,
+      resourceId: resourceId || "",
+      queuedAt,
+    });
+
+    transaction.set(
+      queueRef,
+      {
+        homeId,
+        type,
+        actorName: actorName || "Alguien",
+        excludeUserName: excludeUserName || "",
+        pendingEntries,
+        pendingCount: pendingEntries.length,
+        createdAt: queueData.createdAt || queuedAt,
+        lastQueuedAt: queuedAt,
+        updatedAt: queuedAt,
+      },
+      { merge: true },
+    );
+  });
+
+  await wait(NOTIFICATION_DEBOUNCE_MS);
+  await flushGroupedNotification(queueRef);
+}
+
+async function flushGroupedNotification(queueRef) {
+  const lockId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const now = Date.now();
+
+  const claim = await db.runTransaction(async (transaction) => {
+    const queueSnapshot = await transaction.get(queueRef);
+
+    if (!queueSnapshot.exists) {
+      return { shouldSend: false, reason: "missing" };
+    }
+
+    const queueData = queueSnapshot.data();
+    const pendingEntries = Array.isArray(queueData.pendingEntries)
+      ? queueData.pendingEntries
+      : [];
+
+    if (pendingEntries.length === 0) {
+      return { shouldSend: false, reason: "empty" };
+    }
+
+    const lastQueuedAtMs = queueData.lastQueuedAt?.toMillis?.() || 0;
+    const processingLockUntilMs = queueData.processingLockUntil?.toMillis?.() || 0;
+
+    if (now - lastQueuedAtMs < NOTIFICATION_DEBOUNCE_MS) {
+      return { shouldSend: false, reason: "debounce-window-open" };
+    }
+
+    if (processingLockUntilMs > now) {
+      return { shouldSend: false, reason: "locked" };
+    }
+
+    transaction.update(queueRef, {
+      processingLockId: lockId,
+      processingLockUntil: admin.firestore.Timestamp.fromMillis(now + NOTIFICATION_LOCK_MS),
+      processingStartedAt: admin.firestore.Timestamp.fromMillis(now),
+    });
+
+    return {
+      shouldSend: true,
+      queueData,
+      pendingEntries,
+      lockId,
+    };
+  });
+
+  if (!claim.shouldSend) {
+    logger.info("Skipping grouped notification flush", {
+      path: queueRef.path,
+      reason: claim.reason,
+    });
+    return;
+  }
+
+  const body = buildGroupedNotificationBody(
+    claim.queueData.type,
+    claim.queueData.actorName,
+    claim.pendingEntries,
+  );
+  const resourceId = claim.pendingEntries.length === 1
+    ? (claim.pendingEntries[0]?.resourceId || "")
+    : "";
+
+  try {
+    await sendHomeNotification({
+      homeId: claim.queueData.homeId,
+      excludeUserName: claim.queueData.excludeUserName,
+      body,
+      type: claim.queueData.type,
+      resourceId,
+    });
+
+    await db.runTransaction(async (transaction) => {
+      const queueSnapshot = await transaction.get(queueRef);
+
+      if (!queueSnapshot.exists) return;
+
+      const queueData = queueSnapshot.data();
+      if (queueData.processingLockId !== claim.lockId) return;
+
+      transaction.delete(queueRef);
+    });
+  } catch (error) {
+    logger.error("Error sending grouped notification", {
+      path: queueRef.path,
+      error,
+    });
+
+    await db.runTransaction(async (transaction) => {
+      const queueSnapshot = await transaction.get(queueRef);
+
+      if (!queueSnapshot.exists) return;
+
+      const queueData = queueSnapshot.data();
+      if (queueData.processingLockId !== claim.lockId) return;
+
+      transaction.update(queueRef, {
+        processingLockId: admin.firestore.FieldValue.delete(),
+        processingLockUntil: admin.firestore.FieldValue.delete(),
+        processingStartedAt: admin.firestore.FieldValue.delete(),
+      });
+    });
+
+    throw error;
+  }
+}
 
 async function sendHomeNotification({
   homeId,
@@ -133,10 +340,11 @@ exports.notifyShoppingItemCreated = onDocumentCreated(
     const author = shoppingItem.addedBy || "Alguien";
     const itemName = shoppingItem.name || "un producto";
 
-    await sendHomeNotification({
+    await queueGroupedNotification({
       homeId,
       excludeUserName: shoppingItem.addedBy,
-      body: `${author} añadió ${itemName} a la compra.`,
+      actorName: author,
+      entryLabel: itemName,
       type: "shopping-created",
       resourceId: itemId,
     });
@@ -157,10 +365,11 @@ exports.notifyShoppingItemBought = onDocumentUpdated(
     const buyer = after.boughtBy || "Alguien";
     const itemName = after.name || "un producto";
 
-    await sendHomeNotification({
+    await queueGroupedNotification({
       homeId,
       excludeUserName: after.boughtBy,
-      body: `${buyer} compró ${itemName}.`,
+      actorName: buyer,
+      entryLabel: itemName,
       type: "shopping-bought",
       resourceId: itemId,
     });
@@ -179,10 +388,11 @@ exports.notifyTaskCreated = onDocumentCreated(
     const author = task.addedBy || "Alguien";
     const taskTitle = task.title || "una tarea";
 
-    await sendHomeNotification({
+    await queueGroupedNotification({
       homeId,
       excludeUserName: task.addedBy,
-      body: `${author} añadió la tarea ${taskTitle}.`,
+      actorName: author,
+      entryLabel: taskTitle,
       type: "task-created",
       resourceId: taskId,
     });
@@ -203,10 +413,11 @@ exports.notifyTaskDone = onDocumentUpdated(
     const doneBy = after.doneBy || "Alguien";
     const taskTitle = after.title || "una tarea";
 
-    await sendHomeNotification({
+    await queueGroupedNotification({
       homeId,
       excludeUserName: after.doneBy,
-      body: `${doneBy} completó ${taskTitle}.`,
+      actorName: doneBy,
+      entryLabel: taskTitle,
       type: "task-done",
       resourceId: taskId,
     });
