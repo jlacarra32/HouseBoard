@@ -8,7 +8,7 @@ const {
 
 admin.initializeApp();
 
-setGlobalOptions({ maxInstances: 10 });
+setGlobalOptions({ region: 'europe-southwest1', maxInstances: 10 });
 
 const db = admin.firestore();
 const messaging = admin.messaging();
