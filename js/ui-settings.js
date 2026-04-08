@@ -14,8 +14,8 @@ const getShoppingConfigRef = () => doc(db, 'homes', localStorage.getItem('lrhome
 const getMembersConfigRef  = () => doc(db, 'homes', localStorage.getItem('lrhome_homeId'), 'config', 'members');
 
 export let shoppingCategories = [
-  'Fruta y Verdura', 'Lácteos', 'Carnicería', 'Panadería',
-  'Congelados', 'Limpieza', 'Higiene', 'Bebidas', 'Otros',
+  'Comida', 'Fruta y verdura', 'Lácteos', 'Carnicería', 'Panadería',
+  'Limpieza', 'Higiene', 'Bebidas', 'Otros',
 ];
 
 export let taskMembers = [];

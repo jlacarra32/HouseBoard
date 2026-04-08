@@ -1,6 +1,6 @@
-# L-R Home 🏠
+# HouseBoard 🏠
 
-**L-R Home** es una aplicación web familiar para organizar el hogar de forma compartida en tiempo real. Permite gestionar la **lista de la compra** y las **tareas del hogar** desde cualquier dispositivo, sin instalación ni registro. Basta con compartir la URL para que todos los miembros del hogar vean los cambios al instante.
+**HouseBoard** es una aplicación web familiar para organizar el hogar de forma compartida en tiempo real. Permite gestionar la **lista de la compra** y las **tareas del hogar** desde cualquier dispositivo, sin instalación ni registro. Basta con compartir la URL para que todos los miembros del hogar vean los cambios al instante.
 
 ---
 

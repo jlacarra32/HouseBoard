@@ -1,6 +1,6 @@
 {
-  "name": "L-R Home",
-  "short_name": "L-R Home",
+  "name": "HouseBoard",
+  "short_name": "HouseBoard",
   "description": "App familiar para organizar la lista de la compra y las tareas del hogar en tiempo real.",
   "start_url": "/",
   "display": "standalone",
