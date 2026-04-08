@@ -35,6 +35,10 @@ export async function initPushNotifications(homeId, userName) {
 
   try {
     const registration = await navigator.serviceWorker.register(SERVICE_WORKER_PATH);
+    
+    // Esperar a que el service worker esté listo y activo
+    await navigator.serviceWorker.ready;
+
     const messaging = getMessaging(app);
 
     bindForegroundNotifications(messaging);

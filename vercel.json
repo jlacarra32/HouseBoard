@@ -1,7 +1,10 @@
 {
   "outputDirectory": ".",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/((?!.*\\.(?:js|css|png|jpg|jpeg|gif|ico|json|svg|webp)$).*)",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
     {
