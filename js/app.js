@@ -38,6 +38,7 @@ import {
 } from './ui-tasks.js';
 
 import { createHome, joinHome } from './db-homes.js';
+import { initPushNotifications } from './notifications.js';
 
 // ─── Estado interno ───────────────────────────────────────────────────────────
 let currentUser = '';
@@ -147,6 +148,7 @@ function startApp() {
   if (app) app.hidden = false;
 
   setActiveUser(currentUser);
+  initPushNotifications(currentHomeId, currentUser);
   
   // Actualizar nombre de la casa en el header según se solicitó
   try {

@@ -81,6 +81,7 @@ FIREBASE_PROJECT_ID=lr-home
 FIREBASE_STORAGE_BUCKET=lr-home.appspot.com
 FIREBASE_MESSAGING_SENDER_ID=123456789012
 FIREBASE_APP_ID=1:123456789012:web:xxxxxxxxxxxxxxxx
+FIREBASE_VAPID_KEY=BKxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 Para **desarrollo local**, pega temporalmente esos valores directamente en `js/firebase-config.js` en el bloque marcado como `DEV_CONFIG`. **Nunca hagas commit con datos reales.**
@@ -115,9 +116,12 @@ Abre `http://localhost:3000` (o el puerto que indique) en el navegador.
    | `FIREBASE_STORAGE_BUCKET` | `tu-proyecto.appspot.com` |
    | `FIREBASE_MESSAGING_SENDER_ID` | `123456789012` |
    | `FIREBASE_APP_ID` | `1:xxx:web:xxx` |
+   | `FIREBASE_VAPID_KEY` | `BK...` (clave publica Web Push) |
 
 4. Activa las variables para **Production** (y opcionalmente Preview).
 5. Haz **Deploy**. Vercel inyecta las variables como `window.__ENV__` en tiempo de build gracias a `vercel.json`.
+
+Para que las notificaciones push web funcionen, activa **Cloud Messaging** en Firebase Console y copia la **clave publica de Web Push** en `FIREBASE_VAPID_KEY`.
 
 > **Nota**: como la app es 100% estática (HTML + JS sin bundler), las variables de entorno deben inyectarse en el HTML mediante el bloque `<script>window.__ENV__ = {...}</script>`. Si ves errores de Firebase en producción, verifica el paso de inyección en `vercel.json` o usa un [Edge Middleware](https://vercel.com/docs/functions/edge-middleware) para inyectarlas dinámicamente.
 

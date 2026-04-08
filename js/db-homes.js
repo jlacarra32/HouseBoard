@@ -21,6 +21,11 @@ export async function createHome(name, userName) {
     createdAt: serverTimestamp(),
     members: [userName]
   });
+
+  await setDoc(doc(db, 'homes', homeId, 'members', userName), {
+    userName,
+    updatedAt: serverTimestamp()
+  }, { merge: true });
   
   return { homeId, code };
 }
@@ -39,6 +44,11 @@ export async function joinHome(code, userName) {
   await updateDoc(doc(db, 'homes', homeId), {
     members: arrayUnion(userName)
   });
+
+  await setDoc(doc(db, 'homes', homeId, 'members', userName), {
+    userName,
+    updatedAt: serverTimestamp()
+  }, { merge: true });
   
   return homeId;
 }
