@@ -138,10 +138,10 @@ export function showCustomPrompt(title, placeholder = '', maxLength = 40) {
     overlay.innerHTML = `
       <div class="modal-card">
         <div class="modal-card__header" style="margin-bottom: 16px;">
-          <h3 class="modal-card__title">\${title}</h3>
+          <h3 class="modal-card__title">${title}</h3>
         </div>
         <div style="padding: 0 20px 20px;">
-          <input type="text" class="form-input" id="custom-prompt-input" placeholder="\${placeholder}" maxlength="\${maxLength}" autocomplete="off" style="margin-bottom: 20px;" />
+          <input type="text" class="form-input" id="custom-prompt-input" placeholder="${placeholder}" maxlength="${maxLength}" autocomplete="off" style="margin-bottom: 20px;" />
           <div style="display: flex; gap: 8px;">
             <button class="btn btn--full" id="custom-prompt-cancel" style="background: var(--color-surface-2); color: var(--color-text);">Cancelar</button>
             <button class="btn btn--primary btn--full" id="custom-prompt-confirm">Confirmar</button>

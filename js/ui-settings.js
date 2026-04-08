@@ -5,6 +5,7 @@ import {
   setDoc,
   updateDoc,
   onSnapshot,
+  arrayRemove
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { setActiveUser, showToast, showCustomPrompt } from './ui-shared.js';
 import { getHomesForUser, createHome, joinHome } from './db-homes.js';
@@ -41,16 +42,7 @@ export function subscribeToConfig() {
     }
   });
 
-  onSnapshot(getMembersConfigRef(), (snap) => {
-    if (snap.exists()) {
-      const members = snap.data().members;
-      if (Array.isArray(members)) {
-        taskMembers = members;
-        notifyMembers();
-        _renderMemberChips();
-      }
-    }
-  });
+  // getMembersConfigRef snapshot removed as requested
 
   onSnapshot(getHomeRef(), (snap) => {
     if (snap.exists()) {
@@ -63,6 +55,11 @@ export function subscribeToConfig() {
       if (c) c.innerText = data.code || '---';
       if (headerName && data.name) {
         headerName.innerText = ` • ${data.name}`;
+      }
+      if (Array.isArray(data.members)) {
+        taskMembers = data.members;
+        notifyMembers();
+        _renderMemberChips();
       }
     }
   });
@@ -137,11 +134,6 @@ export function initSettingsPanel() {
   const addCatInput = document.getElementById('settings-add-cat-input');
   addCatBtn?.addEventListener('click', () => _addItem('categories'));
   addCatInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') _addItem('categories'); });
-
-  const addMemberBtn   = document.getElementById('settings-add-member-btn');
-  const addMemberInput = document.getElementById('settings-add-member-input');
-  addMemberBtn?.addEventListener('click', () => _addItem('members'));
-  addMemberInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') _addItem('members'); });
 }
 
 async function openPanel() {
@@ -210,14 +202,13 @@ function _saveName() {
 // ─── Helpers categorías/áreas ─────────────────────────────────────────────────
 async function _addItem(field) {
   let isCategories = field === 'categories';
-  let isMembers = field === 'members';
-  const inputId = isCategories ? 'settings-add-cat-input' : 'settings-add-member-input';
+  const inputId = 'settings-add-cat-input';
   const input = document.getElementById(inputId);
   const value = input?.value.trim();
   if (!value) { input?.focus(); return; }
 
-  const list = isCategories ? shoppingCategories : taskMembers;
-  const ref = isCategories ? getShoppingConfigRef() : getMembersConfigRef();
+  const list = shoppingCategories;
+  const ref = getShoppingConfigRef();
   const updated = [...list, value];
 
   try {
@@ -234,10 +225,20 @@ async function _deleteItem(field, value) {
   let isCategories = field === 'categories';
   let isMembers = field === 'members';
   
-  const list = isCategories ? shoppingCategories : taskMembers;
-  const ref = isCategories ? getShoppingConfigRef() : getMembersConfigRef();
+  if (isMembers) {
+    try {
+      await updateDoc(getHomeRef(), { members: arrayRemove(value) });
+    } catch (err) {
+      showToast('Error al eliminar el miembro.', 'error');
+      console.error(err);
+    }
+    return;
+  }
+  
+  const list = shoppingCategories;
+  const ref = getShoppingConfigRef();
   const updated = list.filter(v => v !== value);
-  if (updated.length === 0 && !isMembers) { // Miembros puede estar vacío
+  if (updated.length === 0) {
     showToast('Debe quedar al menos una opción.', 'error');
     return;
   }
@@ -410,20 +411,6 @@ function _buildPanelHTML() {
           
           <label class="settings-label" style="margin-top: 16px;">Miembros del hogar</label>
           <div class="settings-chips" id="settings-member-chips"></div>
-          <div class="settings-input-row settings-input-row--mt">
-            <input
-              type="text"
-              id="settings-add-member-input"
-              class="form-input"
-              placeholder="Añadir miembro…"
-              maxlength="30"
-              autocomplete="off"
-            />
-            <button class="btn btn--primary settings-add-btn" id="settings-add-member-btn" aria-label="Añadir miembro">
-              <i data-lucide="plus"></i>
-              <span>Añadir</span>
-            </button>
-          </div>
         </div>
       </section>
 
