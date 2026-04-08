@@ -10,6 +10,10 @@ const firebaseConfigModule = `
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import {
+  getAnalytics,
+  isSupported as isAnalyticsSupported,
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js';
 
 export const firebaseConfig = {
   apiKey: "${process.env.FIREBASE_API_KEY || ''}",
@@ -17,12 +21,26 @@ export const firebaseConfig = {
   projectId: "${process.env.FIREBASE_PROJECT_ID || ''}",
   storageBucket: "${process.env.FIREBASE_STORAGE_BUCKET || ''}",
   messagingSenderId: "${process.env.FIREBASE_MESSAGING_SENDER_ID || ''}",
-  appId: "${process.env.FIREBASE_APP_ID || ''}"
+  appId: "${process.env.FIREBASE_APP_ID || ''}",
+  measurementId: "${process.env.FIREBASE_MEASUREMENT_ID || ''}"
 };
 
 export const messagingVapidKey = "${process.env.FIREBASE_VAPID_KEY || ''}";
 export const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+export let analytics = null;
+
+if (firebaseConfig.measurementId) {
+  isAnalyticsSupported()
+    .then((supported) => {
+      if (supported) {
+        analytics = getAnalytics(app);
+      }
+    })
+    .catch(() => {
+      analytics = null;
+    });
+}
 `;
 
 const firebaseMessagingServiceWorker = `

@@ -52,6 +52,16 @@ let tasksView = localStorage.getItem('tasksView') || 'recent';
 let unsubscribeShopping = null;
 let unsubscribeTasks = null;
 
+function trackAnalyticsEvent(eventName, params = {}) {
+  if (!analytics) return;
+
+  try {
+    logEvent(analytics, eventName, params);
+  } catch (error) {
+    console.warn('Analytics no disponible para este evento:', eventName, error);
+  }
+}
+
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   currentUser = localStorage.getItem('lrhome_user') || '';
@@ -163,7 +173,7 @@ function finishWelcome(homeId) {
     localStorage.setItem('lrhome_homes', JSON.stringify(homes));
   }
   document.getElementById('welcome-screen').hidden = true;
-  logEvent(analytics, 'sign_up', { method: 'home_creation' });
+  trackAnalyticsEvent('sign_up', { method: 'home_creation' });
   startApp();
 }
 
@@ -173,7 +183,7 @@ function startApp() {
 
   setActiveUser(currentUser);
   initPushNotifications(currentHomeId, currentUser);
-  logEvent(analytics, 'login', { content_type: 'app_start' });
+  trackAnalyticsEvent('login', { content_type: 'app_start' });
   
   // Actualizar nombre de la casa en el header según se solicitó
   try {
@@ -227,9 +237,9 @@ function startApp() {
       try {
         await addShoppingItem({ ...data, addedBy: currentUser });
         showToast('Producto añadido 🛒', 'success');
-        logEvent(analytics, 'add_to_cart', { 
+        trackAnalyticsEvent('add_to_cart', {
           item_name: data.name,
-          item_category: data.category 
+          item_category: data.category,
         });
       } catch (err) {
         showToast(err.message, 'error');
@@ -245,7 +255,7 @@ function startApp() {
           : `"${item?.name || 'Producto'}" de vuelta en la lista`;
         showToast(msg, 'success');
         if (status === 'pending') {
-          logEvent(analytics, 'purchase', { item_name: item?.name });
+          trackAnalyticsEvent('purchase', { item_name: item?.name });
         }
       } catch (err) {
         showToast('Error al actualizar el producto.', 'error');
@@ -280,7 +290,7 @@ function startApp() {
       try {
         await addTask({ ...data, addedBy: currentUser });
         showToast('Tarea añadida ✓', 'success');
-        logEvent(analytics, 'add_task', { task_title: data.title });
+        trackAnalyticsEvent('add_task', { task_title: data.title });
       } catch (err) {
         showToast(err.message, 'error');
         throw err;
@@ -295,7 +305,7 @@ function startApp() {
           : `"${task?.title || 'Tarea'}" marcada como pendiente`;
         showToast(msg, 'success');
         if (status === 'pending') {
-          logEvent(analytics, 'complete_task', { task_title: task?.title });
+          trackAnalyticsEvent('complete_task', { task_title: task?.title });
         }
       } catch (err) {
         showToast('Error al actualizar la tarea.', 'error');
