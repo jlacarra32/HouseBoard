@@ -39,6 +39,8 @@ import {
 
 import { createHome, joinHome } from './db-homes.js';
 import { initPushNotifications } from './notifications.js';
+import { analytics } from './firebase-config.js';
+import { logEvent } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js';
 
 // ─── Estado interno ───────────────────────────────────────────────────────────
 let currentUser = '';
@@ -55,11 +57,32 @@ document.addEventListener('DOMContentLoaded', () => {
   currentUser = localStorage.getItem('lrhome_user') || '';
   currentHomeId = localStorage.getItem('lrhome_homeId') || '';
 
+  // Deep linking: detectar si venimos de una notificación con homeId
+  const params = new URLSearchParams(window.location.search);
+  const urlHomeId = params.get('homeId');
+  if (urlHomeId && urlHomeId !== currentHomeId) {
+    const savedHomes = JSON.parse(localStorage.getItem('lrhome_homes') || '[]');
+    const hasAccess = savedHomes.some(h => 
+      (typeof h === 'string' && h === urlHomeId) || 
+      (h && typeof h === 'object' && (h.id === urlHomeId || h.homeId === urlHomeId))
+    );
+    
+    if (hasAccess) {
+      currentHomeId = urlHomeId;
+      localStorage.setItem('lrhome_homeId', urlHomeId);
+      // Limpiar URL para no dejar el query param
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }
+
   if (currentUser && currentHomeId) {
     startApp();
   } else {
     showWelcomeScreen();
   }
+
+  // Detección de navegador y aviso de instalación
+  checkPWAInstallation();
 });
 
 function showWelcomeScreen() {
@@ -140,6 +163,7 @@ function finishWelcome(homeId) {
     localStorage.setItem('lrhome_homes', JSON.stringify(homes));
   }
   document.getElementById('welcome-screen').hidden = true;
+  logEvent(analytics, 'sign_up', { method: 'home_creation' });
   startApp();
 }
 
@@ -149,6 +173,7 @@ function startApp() {
 
   setActiveUser(currentUser);
   initPushNotifications(currentHomeId, currentUser);
+  logEvent(analytics, 'login', { content_type: 'app_start' });
   
   // Actualizar nombre de la casa en el header según se solicitó
   try {
@@ -202,6 +227,10 @@ function startApp() {
       try {
         await addShoppingItem({ ...data, addedBy: currentUser });
         showToast('Producto añadido 🛒', 'success');
+        logEvent(analytics, 'add_to_cart', { 
+          item_name: data.name,
+          item_category: data.category 
+        });
       } catch (err) {
         showToast(err.message, 'error');
         throw err;
@@ -215,6 +244,9 @@ function startApp() {
           ? `"${item?.name || 'Producto'}" marcado como comprado ✓`
           : `"${item?.name || 'Producto'}" de vuelta en la lista`;
         showToast(msg, 'success');
+        if (status === 'pending') {
+          logEvent(analytics, 'purchase', { item_name: item?.name });
+        }
       } catch (err) {
         showToast('Error al actualizar el producto.', 'error');
       }
@@ -248,6 +280,7 @@ function startApp() {
       try {
         await addTask({ ...data, addedBy: currentUser });
         showToast('Tarea añadida ✓', 'success');
+        logEvent(analytics, 'add_task', { task_title: data.title });
       } catch (err) {
         showToast(err.message, 'error');
         throw err;
@@ -261,6 +294,9 @@ function startApp() {
           ? `"${task?.title || 'Tarea'}" completada ✓`
           : `"${task?.title || 'Tarea'}" marcada como pendiente`;
         showToast(msg, 'success');
+        if (status === 'pending') {
+          logEvent(analytics, 'complete_task', { task_title: task?.title });
+        }
       } catch (err) {
         showToast('Error al actualizar la tarea.', 'error');
       }
@@ -314,5 +350,54 @@ function startApp() {
     tab.addEventListener('click', () => {
       showModule(tab.dataset.module);
     });
+  });
+}
+
+/**
+ * Task 3: Detecta el navegador y muestra instrucciones de instalación PWA si es necesario.
+ */
+function checkPWAInstallation() {
+  if (localStorage.getItem('lrhome_pwa_dismissed')) return;
+
+  const ua = navigator.userAgent;
+  let message = "";
+
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isSamsung = /SamsungBrowser/.test(ua);
+  const isChromeAndroid = /Chrome/.test(ua) && /Android/.test(ua) && !isSamsung;
+  const isSafariIOS = isIOS && /Safari/.test(ua) && !/CriOS|FxiOS|OPiOS|mercury/.test(ua);
+
+  if (isSamsung) {
+    message = "Para recibir notificaciones abre HouseBoard en Chrome y añádelo a la pantalla de inicio.";
+  } else if (isSafariIOS) {
+    message = "Añade HouseBoard a la pantalla de inicio para la mejor experiencia: pulsa compartir → Añadir a pantalla de inicio.";
+  } else if (isIOS && !isSafariIOS) {
+    message = "Las notificaciones en iPhone requieren Safari. Ábrelo en Safari y añádelo a la pantalla de inicio.";
+  } else if (isChromeAndroid) {
+    // Si no está ya en modo standalone (instalado)
+    if (!window.matchMedia('(display-mode: standalone)').matches) {
+      message = "Añade HouseBoard a la pantalla de inicio para la mejor experiencia: menú → Añadir a pantalla de inicio.";
+    }
+  }
+
+  if (message) {
+    showInstallBanner(message);
+  }
+}
+
+function showInstallBanner(message) {
+  const banner = document.createElement('div');
+  banner.className = 'install-banner';
+  banner.innerHTML = `
+    <div class="install-banner__content">
+      <p>${message}</p>
+      <button class="install-banner__close" aria-label="Cerrar">✕</button>
+    </div>
+  `;
+  document.body.appendChild(banner);
+
+  banner.querySelector('.install-banner__close').addEventListener('click', () => {
+    banner.remove();
+    localStorage.setItem('lrhome_pwa_dismissed', 'true');
   });
 }

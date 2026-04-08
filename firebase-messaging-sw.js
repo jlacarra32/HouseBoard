@@ -38,24 +38,32 @@ messaging.onBackgroundMessage((payload) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const targetUrl = new URL(
-    event.notification?.data?.link || '/',
-    self.location.origin
-  ).href;
+  const baseUrl = self.location.origin;
+  const data = event.notification?.data || {};
+  const targetUrl = new URL(data.link || '/', baseUrl).href;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Intentar encontrar una pestaña que ya pertenezca a la app
       for (const client of clientList) {
-        if (client.url === targetUrl && 'focus' in client) {
-          return client.focus();
+        const clientUrl = new URL(client.url, baseUrl);
+        if (clientUrl.origin === baseUrl && 'focus' in client) {
+          // Si el cliente está en la URL exacta, solo focus
+          if (client.url === targetUrl) {
+            return client.focus();
+          }
+          // Si es otra página de la app, navegar y focus
+          if ('navigate' in client) {
+            client.focus();
+            return client.navigate(targetUrl);
+          }
         }
       }
 
+      // Si no hay pestañas abiertas, abrir una nueva
       if (clients.openWindow) {
         return clients.openWindow(targetUrl);
       }
-
-      return undefined;
     })
   );
 });

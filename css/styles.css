@@ -1219,3 +1219,61 @@ body {
     border-color: var(--color-border);
   }
 }
+/* ─── Install Banner (PWA) ──────────────────────────────────────────────────── */
+.install-banner {
+  position: fixed;
+  top: 80px;
+  left: 20px;
+  right: 20px;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  border: 2px solid var(--color-primary-light);
+  z-index: 1000;
+  animation: slideDown 0.4s ease both;
+  max-width: var(--content-max);
+  margin: 0 auto;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+.install-banner__content {
+  position: relative;
+  padding: 16px 40px 16px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.install-banner__content p {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--color-text);
+}
+
+.install-banner__close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.install-banner__close:hover {
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+}

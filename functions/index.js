@@ -27,6 +27,17 @@ async function sendHomeNotification({
   type,
   resourceId,
 }) {
+  // Obtener el nombre de la casa si es posible
+  let homeName = "HouseBoard";
+  try {
+    const homeDoc = await db.doc(`homes/${homeId}`).get();
+    if (homeDoc.exists) {
+      homeName = homeDoc.get("name") || "HouseBoard";
+    }
+  } catch (err) {
+    logger.error("Error fetching home name", { homeId, err });
+  }
+
   const membersSnapshot = await db.collection(`homes/${homeId}/members`).get();
   const tokenEntries = membersSnapshot.docs
     .filter((memberDoc) => memberDoc.id !== excludeUserName)
@@ -51,21 +62,24 @@ async function sendHomeNotification({
     uniqueEntries.push({ ...entry, token });
   }
 
+  const notificationTitle = `${homeName} · HouseBoard`;
+  const notificationLink = `${APP_LINK}?homeId=${homeId}`;
+
   const response = await messaging.sendEachForMulticast({
     tokens: uniqueEntries.map((entry) => entry.token),
     data: {
-      title: APP_TITLE,
+      title: notificationTitle,
       body,
       icon: APP_ICON,
       badge: APP_ICON,
-      link: APP_LINK,
+      link: notificationLink,
       type,
       homeId,
       resourceId,
     },
     webpush: {
       fcmOptions: {
-        link: APP_LINK,
+        link: notificationLink,
       },
     },
   });
