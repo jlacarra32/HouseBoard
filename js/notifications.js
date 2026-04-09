@@ -1,4 +1,5 @@
 import { app, db, messagingVapidKey } from './firebase-config.js';
+import { showToast } from './ui-shared.js';
 import {
   arrayUnion,
   doc,
@@ -118,24 +119,8 @@ function bindForegroundNotifications(messaging) {
   foregroundListenerBound = true;
 
   onMessage(messaging, (payload) => {
-    if (Notification.permission !== 'granted') return;
-
-    const title = payload?.data?.title || 'HouseBoard';
     const body = payload?.data?.body || '';
-    const icon = payload?.data?.icon || '/assets/icon.png';
-    const link = payload?.data?.link || '/';
-    const notification = new Notification(title, {
-      body,
-      icon,
-      data: { link },
-    });
-
-    notification.onclick = () => {
-      window.focus();
-      if (link) {
-        window.location.assign(link);
-      }
-      notification.close();
-    };
+    if (!body) return;
+    showToast(body, 'success');
   });
 }
