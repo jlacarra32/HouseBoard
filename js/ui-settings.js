@@ -5,7 +5,8 @@ import {
   setDoc,
   updateDoc,
   onSnapshot,
-  arrayRemove
+  arrayRemove,
+  serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { setActiveUser, showToast, showCustomPrompt } from './ui-shared.js';
 import { getHomesForUser, createHome, joinHome } from './db-homes.js';
@@ -13,6 +14,19 @@ import { getHomesForUser, createHome, joinHome } from './db-homes.js';
 const getHomeRef = () => doc(db, 'homes', localStorage.getItem('lrhome_homeId'));
 const getShoppingConfigRef = () => doc(db, 'homes', localStorage.getItem('lrhome_homeId'), 'config', 'shopping');
 const getMembersConfigRef  = () => doc(db, 'homes', localStorage.getItem('lrhome_homeId'), 'config', 'members');
+const getCurrentMemberRef = () => doc(
+  db,
+  'homes',
+  localStorage.getItem('lrhome_homeId'),
+  'members',
+  localStorage.getItem('lrhome_user'),
+);
+const DEFAULT_NOTIFICATION_PREFS = {
+  itemAdded: true,
+  itemBought: true,
+  taskAdded: true,
+  taskDone: true,
+};
 
 export let shoppingCategories = [
   'Comida', 'Fruta y verdura', 'Lácteos', 'Carnicería', 'Panadería',
@@ -22,12 +36,16 @@ export let shoppingCategories = [
 export let taskMembers = [];
 const categoriesListeners = [];
 const membersListeners    = [];
+let notificationPrefs = { ...DEFAULT_NOTIFICATION_PREFS };
 
 export function onShoppingCategoriesChange(cb) { categoriesListeners.push(cb); }
 export function onTaskMembersChange(cb)         { membersListeners.push(cb); }
 
 function notifyCategories() { categoriesListeners.forEach(cb => cb([...shoppingCategories])); }
 function notifyMembers()    { membersListeners.forEach(cb => cb([...taskMembers])); }
+function normalizeNotificationPrefs(value) {
+  return { ...DEFAULT_NOTIFICATION_PREFS, ...(value || {}) };
+}
 
 export function subscribeToConfig() {
   onSnapshot(getShoppingConfigRef(), (snap) => {
@@ -62,6 +80,11 @@ export function subscribeToConfig() {
         _renderMemberChips();
       }
     }
+  });
+
+  onSnapshot(getCurrentMemberRef(), (snap) => {
+    notificationPrefs = normalizeNotificationPrefs(snap.data()?.notificationPrefs);
+    _renderNotificationPrefs();
   });
 }
 
@@ -134,6 +157,14 @@ export function initSettingsPanel() {
   const addCatInput = document.getElementById('settings-add-cat-input');
   addCatBtn?.addEventListener('click', () => _addItem('categories'));
   addCatInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') _addItem('categories'); });
+
+  document.querySelectorAll('[data-notification-pref]').forEach((input) => {
+    input.addEventListener('change', async (event) => {
+      const prefKey = event.target.dataset.notificationPref;
+      const enabled = Boolean(event.target.checked);
+      await _saveNotificationPref(prefKey, enabled, event.target);
+    });
+  });
 }
 
 async function openPanel() {
@@ -145,6 +176,7 @@ async function openPanel() {
 
   _renderCategoryChips();
   _renderMemberChips();
+  _renderNotificationPrefs();
 
   if (window.lucide) window.lucide.createIcons({ nodes: [panel] });
 
@@ -200,6 +232,29 @@ function _saveName() {
 }
 
 // ─── Helpers categorías/áreas ─────────────────────────────────────────────────
+async function _saveNotificationPref(prefKey, enabled, inputEl) {
+  if (!prefKey || !(prefKey in DEFAULT_NOTIFICATION_PREFS)) return;
+
+  const previousPrefs = { ...notificationPrefs };
+  notificationPrefs = {
+    ...notificationPrefs,
+    [prefKey]: enabled,
+  };
+
+  try {
+    await setDoc(getCurrentMemberRef(), {
+      userName: localStorage.getItem('lrhome_user') || '',
+      notificationPrefs,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (error) {
+    notificationPrefs = previousPrefs;
+    if (inputEl) inputEl.checked = previousPrefs[prefKey];
+    showToast('No se pudo guardar la preferencia.', 'error');
+    console.error(error);
+  }
+}
+
 async function _addItem(field) {
   let isCategories = field === 'categories';
   const inputId = 'settings-add-cat-input';
@@ -265,6 +320,22 @@ function _renderMemberChips() {
   if (!container) return;
   container.innerHTML = taskMembers.map(m => _chipHTML('members', m)).join('');
   _bindChipEvents(container, 'members');
+}
+
+function _renderNotificationPrefs() {
+  const config = [
+    { key: 'itemAdded', label: 'Alguien añade un item a la compra' },
+    { key: 'itemBought', label: 'Alguien marca items como comprados' },
+    { key: 'taskAdded', label: 'Alguien añade una tarea' },
+    { key: 'taskDone', label: 'Alguien completa tareas' },
+  ];
+
+  config.forEach(({ key, label }) => {
+    const input = document.querySelector(`[data-notification-pref="${key}"]`);
+    const text = document.getElementById(`settings-notification-label-${key}`);
+    if (input) input.checked = Boolean(notificationPrefs[key]);
+    if (text) text.textContent = notificationPrefs[key] ? 'Activadas' : 'Silenciadas';
+  });
 }
 
 function _chipHTML(field, value) {
@@ -411,6 +482,35 @@ function _buildPanelHTML() {
           
           <label class="settings-label" style="margin-top: 16px;">Miembros del hogar</label>
           <div class="settings-chips" id="settings-member-chips"></div>
+        </div>
+      </section>
+
+      <section class="settings-block">
+        <h3 class="settings-block__title">
+          <i data-lucide="bell"></i>
+          Notificaciones
+        </h3>
+        <div class="settings-block__content">
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            ${[
+              ['itemAdded', 'Alguien añade un item a la compra'],
+              ['itemBought', 'Alguien marca items como comprados'],
+              ['taskAdded', 'Alguien añade una tarea'],
+              ['taskDone', 'Alguien completa tareas'],
+            ].map(([key, label]) => `
+              <label style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; border:1px solid var(--color-border); border-radius:var(--radius-sm); background:var(--color-surface-2);">
+                <span style="display:flex; flex-direction:column; gap:2px;">
+                  <span style="font-size:0.92rem; color:var(--color-text);">${label}</span>
+                  <span id="settings-notification-label-${key}" style="font-size:0.78rem; color:var(--color-text-muted);">Activadas</span>
+                </span>
+                <input
+                  type="checkbox"
+                  data-notification-pref="${key}"
+                  style="width:18px; height:18px; accent-color: var(--color-primary); flex-shrink:0;"
+                />
+              </label>
+            `).join('')}
+          </div>
         </div>
       </section>
 

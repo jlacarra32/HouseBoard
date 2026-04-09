@@ -15,12 +15,18 @@ const messaging = admin.messaging();
 const APP_TITLE = "HouseBoard";
 const APP_LINK = "/";
 const APP_ICON = "/assets/icon.png";
-const NOTIFICATION_DEBOUNCE_MS = 20_000;
+const NOTIFICATION_DEBOUNCE_MS = 30_000;
 const NOTIFICATION_LOCK_MS = 60_000;
 const INVALID_TOKEN_ERRORS = new Set([
   "messaging/invalid-registration-token",
   "messaging/registration-token-not-registered",
 ]);
+const DEFAULT_NOTIFICATION_PREFS = {
+  itemAdded: true,
+  itemBought: true,
+  taskAdded: true,
+  taskDone: true,
+};
 
 function wait(ms) {
   return new Promise((resolve) => {
@@ -31,6 +37,14 @@ function wait(ms) {
 function getPendingNotificationRef(homeId, type, userName) {
   const safeUserName = encodeURIComponent(userName || "anonymous");
   return db.doc(`homes/${homeId}/notificationDebounce/${type}__${safeUserName}`);
+}
+
+function getNotificationPrefKey(type) {
+  if (type === "shopping-created") return "itemAdded";
+  if (type === "shopping-bought") return "itemBought";
+  if (type === "task-created") return "taskAdded";
+  if (type === "task-done") return "taskDone";
+  return null;
 }
 
 function buildGroupedNotificationBody(type, actorName, pendingEntries) {
@@ -246,8 +260,25 @@ async function sendHomeNotification({
   }
 
   const membersSnapshot = await db.collection(`homes/${homeId}/members`).get();
+  const prefKey = getNotificationPrefKey(type);
   const tokenEntries = membersSnapshot.docs
     .filter((memberDoc) => memberDoc.id !== excludeUserName)
+    .filter((memberDoc) => {
+      if (memberDoc.get("isOnline") === true) {
+        return false;
+      }
+
+      if (!prefKey) {
+        return true;
+      }
+
+      const notificationPrefs = {
+        ...DEFAULT_NOTIFICATION_PREFS,
+        ...(memberDoc.get("notificationPrefs") || {}),
+      };
+
+      return notificationPrefs[prefKey] !== false;
+    })
     .map((memberDoc) => ({
       ref: memberDoc.ref,
       userName: memberDoc.id,

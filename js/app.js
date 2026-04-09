@@ -39,8 +39,14 @@ import {
 
 import { createHome, joinHome } from './db-homes.js';
 import { initPushNotifications } from './notifications.js';
-import { analytics } from './firebase-config.js';
+import { db, analytics } from './firebase-config.js';
 import { logEvent } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js';
+import {
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp,
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 // ─── Estado interno ───────────────────────────────────────────────────────────
 let currentUser = '';
@@ -51,6 +57,14 @@ let shoppingView = localStorage.getItem('shoppingView') || 'recent';
 let tasksView = localStorage.getItem('tasksView') || 'recent';
 let unsubscribeShopping = null;
 let unsubscribeTasks = null;
+let presenceLifecycleBound = false;
+
+const DEFAULT_NOTIFICATION_PREFS = {
+  itemAdded: true,
+  itemBought: true,
+  taskAdded: true,
+  taskDone: true,
+};
 
 function trackAnalyticsEvent(eventName, params = {}) {
   if (!analytics) return;
@@ -63,6 +77,54 @@ function trackAnalyticsEvent(eventName, params = {}) {
 }
 
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
+function getCurrentMemberRef() {
+  if (!currentHomeId || !currentUser) return null;
+  return doc(db, 'homes', currentHomeId, 'members', currentUser);
+}
+
+async function syncCurrentMemberState(isOnline) {
+  const memberRef = getCurrentMemberRef();
+  if (!memberRef) return;
+
+  try {
+    const memberSnap = await getDoc(memberRef);
+    const payload = {
+      userName: currentUser,
+      isOnline,
+      updatedAt: serverTimestamp(),
+    };
+
+    if (!memberSnap.exists() || !memberSnap.data()?.notificationPrefs) {
+      payload.notificationPrefs = DEFAULT_NOTIFICATION_PREFS;
+    }
+
+    await setDoc(memberRef, payload, { merge: true });
+  } catch (error) {
+    console.error('No se pudo sincronizar el estado del miembro:', error);
+  }
+}
+
+function markCurrentMemberOffline() {
+  const memberRef = getCurrentMemberRef();
+  if (!memberRef) return;
+
+  setDoc(memberRef, {
+    userName: currentUser,
+    isOnline: false,
+    updatedAt: serverTimestamp(),
+  }, { merge: true }).catch((error) => {
+    console.error('No se pudo marcar al usuario como desconectado:', error);
+  });
+}
+
+function bindPresenceLifecycle() {
+  if (presenceLifecycleBound) return;
+  presenceLifecycleBound = true;
+
+  window.addEventListener('beforeunload', markCurrentMemberOffline);
+  window.addEventListener('pagehide', markCurrentMemberOffline);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   currentUser = localStorage.getItem('lrhome_user') || '';
   currentHomeId = localStorage.getItem('lrhome_homeId') || '';
@@ -182,6 +244,8 @@ function startApp() {
   if (app) app.hidden = false;
 
   setActiveUser(currentUser);
+  bindPresenceLifecycle();
+  void syncCurrentMemberState(true);
   initPushNotifications(currentHomeId, currentUser);
   trackAnalyticsEvent('login', { content_type: 'app_start' });
   

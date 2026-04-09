@@ -11,6 +11,13 @@ import {
   serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
+const DEFAULT_NOTIFICATION_PREFS = {
+  itemAdded: true,
+  itemBought: true,
+  taskAdded: true,
+  taskDone: true,
+};
+
 export async function createHome(name, userName) {
   const homeId = doc(collection(db, 'homes')).id;
   const code = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -24,6 +31,8 @@ export async function createHome(name, userName) {
 
   await setDoc(doc(db, 'homes', homeId, 'members', userName), {
     userName,
+    isOnline: false,
+    notificationPrefs: DEFAULT_NOTIFICATION_PREFS,
     updatedAt: serverTimestamp()
   }, { merge: true });
   
@@ -47,6 +56,8 @@ export async function joinHome(code, userName) {
 
   await setDoc(doc(db, 'homes', homeId, 'members', userName), {
     userName,
+    isOnline: false,
+    notificationPrefs: DEFAULT_NOTIFICATION_PREFS,
     updatedAt: serverTimestamp()
   }, { merge: true });
   
