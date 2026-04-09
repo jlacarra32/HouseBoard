@@ -38,10 +38,10 @@ export async function initPushNotifications(homeId, userName) {
   if (permission !== 'granted') return;
 
   try {
-    const registration = await navigator.serviceWorker.register(SERVICE_WORKER_PATH);
+    await navigator.serviceWorker.register(SERVICE_WORKER_PATH);
     
     // Esperar a que el service worker esté listo y activo
-    await navigator.serviceWorker.ready;
+    const registration = await navigator.serviceWorker.ready;
 
     const messaging = getMessaging(app);
 
@@ -52,7 +52,10 @@ export async function initPushNotifications(homeId, userName) {
       serviceWorkerRegistration: registration,
     });
 
-    if (!token) return;
+    if (!token) {
+      console.warn('FCM no devolvio token para este navegador.');
+      return;
+    }
 
     await saveMemberFcmToken(homeId, userName, token);
 

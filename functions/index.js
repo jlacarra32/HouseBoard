@@ -284,18 +284,9 @@ async function sendHomeNotification({
 
   const membersSnapshot = await db.collection(`homes/${homeId}/members`).get();
   const prefKey = getNotificationPrefKey(type);
-  const now = Date.now();
   const tokenEntries = membersSnapshot.docs
     .filter((memberDoc) => memberDoc.id !== excludeUserName)
     .filter((memberDoc) => {
-      const updatedAtMs = memberDoc.get("presenceUpdatedAt")?.toMillis?.() || 0;
-      const hasFreshOnlinePresence = memberDoc.get("isOnline") === true &&
-        now - updatedAtMs < ONLINE_PRESENCE_STALE_MS;
-
-      if (hasFreshOnlinePresence) {
-        return false;
-      }
-
       if (!prefKey) {
         return true;
       }
@@ -355,13 +346,6 @@ async function sendHomeNotification({
 
   const response = await messaging.sendEachForMulticast({
     tokens: uniqueEntries.map((entry) => entry.token),
-    notification: {
-      title: notificationTitle,
-      body,
-    },
-    android: {
-      priority: "high",
-    },
     data: {
       title: notificationTitle,
       body,
@@ -372,8 +356,8 @@ async function sendHomeNotification({
       resourceId,
     },
     webpush: {
-      fcmOptions: {
-        link: notificationLink,
+      headers: {
+        Urgency: "high",
       },
     },
   });
