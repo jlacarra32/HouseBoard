@@ -144,6 +144,14 @@ No hay registro ni cuentas. Simplemente **comparte la URL** de la app con quien 
 
 ---
 
+## Desplegar reglas de Firestore
+
+```bash
+firebase deploy --only firestore:rules
+```
+
+---
+
 ## Licencia
 
 MIT — úsala, modifícala y compártela libremente.

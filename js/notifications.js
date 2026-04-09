@@ -1,6 +1,8 @@
 import { app, db, messagingVapidKey } from './firebase-config.js';
 import {
+  arrayUnion,
   doc,
+  getDoc,
   setDoc,
   serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
@@ -13,6 +15,7 @@ import {
 
 const SERVICE_WORKER_PATH = '/firebase-messaging-sw.js';
 let foregroundListenerBound = false;
+const MAX_FCM_TOKENS = 5;
 
 export async function initPushNotifications(homeId, userName) {
   if (!homeId || !userName) return;
@@ -50,15 +53,7 @@ export async function initPushNotifications(homeId, userName) {
 
     if (!token) return;
 
-    await setDoc(
-      doc(db, 'homes', homeId, 'members', userName),
-      {
-        userName,
-        fcmToken: token,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
+    await saveMemberFcmToken(homeId, userName, token);
 
     if (didPrompt) {
       console.info('Notificaciones push activadas.');
@@ -66,6 +61,56 @@ export async function initPushNotifications(homeId, userName) {
   } catch (error) {
     console.error('No se pudo inicializar FCM:', error);
   }
+}
+
+async function saveMemberFcmToken(homeId, userName, rawToken) {
+  const token = typeof rawToken === 'string' ? rawToken.trim() : '';
+  if (!token) return;
+
+  const memberRef = doc(db, 'homes', homeId, 'members', userName);
+  const memberSnap = await getDoc(memberRef);
+  const memberData = memberSnap.exists() ? (memberSnap.data() || {}) : {};
+  const currentTokens = Array.isArray(memberData.fcmTokens)
+    ? memberData.fcmTokens.filter((entry) => typeof entry === 'string' && entry.trim())
+    : [];
+  const legacyToken = typeof memberData.fcmToken === 'string' ? memberData.fcmToken.trim() : '';
+  const mergedTokens = [...new Set([...currentTokens, legacyToken, token].filter(Boolean))];
+  const trimmedTokens = mergedTokens.slice(-MAX_FCM_TOKENS);
+
+  if (currentTokens.includes(token) && !legacyToken && currentTokens.length <= MAX_FCM_TOKENS) {
+    await setDoc(
+      memberRef,
+      {
+        userName,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    return;
+  }
+
+  if (!currentTokens.includes(token) && !legacyToken && currentTokens.length < MAX_FCM_TOKENS) {
+    await setDoc(
+      memberRef,
+      {
+        userName,
+        fcmTokens: arrayUnion(token),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    return;
+  }
+
+  await setDoc(
+    memberRef,
+    {
+      userName,
+      fcmTokens: trimmedTokens,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
 }
 
 function bindForegroundNotifications(messaging) {

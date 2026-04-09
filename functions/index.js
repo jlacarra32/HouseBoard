@@ -48,6 +48,26 @@ function getNotificationPrefKey(type) {
   return null;
 }
 
+function getMemberTokens(memberDoc) {
+  const legacyToken = memberDoc.get("fcmToken");
+  const tokenArray = memberDoc.get("fcmTokens");
+  const tokens = [];
+
+  if (typeof legacyToken === "string" && legacyToken.trim()) {
+    tokens.push(legacyToken.trim());
+  }
+
+  if (Array.isArray(tokenArray)) {
+    tokenArray.forEach((entry) => {
+      if (typeof entry === "string" && entry.trim()) {
+        tokens.push(entry.trim());
+      }
+    });
+  }
+
+  return [...new Set(tokens)];
+}
+
 function buildGroupedNotificationBody(type, actorName, pendingEntries) {
   const actor = actorName || "Alguien";
   const count = pendingEntries.length;
@@ -285,12 +305,18 @@ async function sendHomeNotification({
 
       return notificationPrefs[prefKey] !== false;
     })
-    .map((memberDoc) => ({
-      ref: memberDoc.ref,
-      userName: memberDoc.id,
-      token: memberDoc.get("fcmToken"),
-    }))
-    .filter((entry) => typeof entry.token === "string" && entry.token.trim());
+    .flatMap((memberDoc) => {
+      const legacyToken = typeof memberDoc.get("fcmToken") === "string"
+        ? memberDoc.get("fcmToken").trim()
+        : "";
+
+      return getMemberTokens(memberDoc).map((token) => ({
+        ref: memberDoc.ref,
+        userName: memberDoc.id,
+        token,
+        hadLegacyToken: legacyToken === token,
+      }));
+    });
 
   if (tokenEntries.length === 0) {
     logger.info("No push recipients for home event", { homeId, type, resourceId });
@@ -298,12 +324,28 @@ async function sendHomeNotification({
   }
 
   const uniqueEntries = [];
-  const seenTokens = new Set();
+  const entryByToken = new Map();
   for (const entry of tokenEntries) {
-    const token = entry.token.trim();
-    if (seenTokens.has(token)) continue;
-    seenTokens.add(token);
-    uniqueEntries.push({ ...entry, token });
+    if (entryByToken.has(entry.token)) {
+      entryByToken.get(entry.token).targets.push({
+        ref: entry.ref,
+        userName: entry.userName,
+        hadLegacyToken: entry.hadLegacyToken,
+      });
+      continue;
+    }
+
+    const uniqueEntry = {
+      token: entry.token,
+      targets: [{
+        ref: entry.ref,
+        userName: entry.userName,
+        hadLegacyToken: entry.hadLegacyToken,
+      }],
+    };
+
+    entryByToken.set(entry.token, uniqueEntry);
+    uniqueEntries.push(uniqueEntry);
   }
 
   const notificationTitle = `${homeName} · HouseBoard`;
@@ -355,14 +397,24 @@ async function sendHomeNotification({
       homeId,
       type,
       resourceId,
-      userName: entry.userName,
+      userNames: entry.targets.map((target) => target.userName),
       code: result.error.code,
       message: result.error.message,
     });
 
     if (INVALID_TOKEN_ERRORS.has(result.error.code)) {
-      batch.set(entry.ref, { fcmToken: admin.firestore.FieldValue.delete() }, { merge: true });
-      hasBatchWrites = true;
+      entry.targets.forEach((target) => {
+        const payload = {
+          fcmTokens: admin.firestore.FieldValue.arrayRemove(entry.token),
+        };
+
+        if (target.hadLegacyToken) {
+          payload.fcmToken = admin.firestore.FieldValue.delete();
+        }
+
+        batch.set(target.ref, payload, { merge: true });
+        hasBatchWrites = true;
+      });
     }
   });
 

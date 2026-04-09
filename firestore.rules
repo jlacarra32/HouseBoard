@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function memberAllowedKeys() {
+      return ['userName', 'isOnline', 'updatedAt', 'notificationPrefs', 'fcmToken', 'fcmTokens'];
+    }
+
+    // Sin auth real no podemos demostrar identidad; esta restriccion solo fuerza
+    // que el cliente escriba en el doc cuyo id coincide con el userName declarado.
+    function isOwnMemberDoc(userName) {
+      return request.resource.data.userName == userName
+        && request.resource.data.keys().hasOnly(memberAllowedKeys());
+    }
+
+    match /homes/{homeId} {
+      // El modelo actual usa homeId como token de acceso compartido.
+      allow read, write: if true;
+
+      match /shoppingItems/{itemId} {
+        allow read, write: if true;
+      }
+
+      match /tasks/{taskId} {
+        allow read, write: if true;
+      }
+
+      match /members/{userName} {
+        allow read: if true;
+        allow create: if isOwnMemberDoc(userName);
+        allow update: if resource.data.userName == userName && isOwnMemberDoc(userName);
+        allow delete: if false;
+      }
+
+      match /config/{docId} {
+        allow read: if true;
+        allow write: if false;
+      }
+
+      match /notificationDebounce/{docId} {
+        allow read, write: if false;
+      }
+    }
+  }
+}
