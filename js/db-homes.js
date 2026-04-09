@@ -33,6 +33,7 @@ export async function createHome(name, userName) {
     userName,
     isOnline: false,
     notificationPrefs: DEFAULT_NOTIFICATION_PREFS,
+    presenceUpdatedAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   }, { merge: true });
   
@@ -58,6 +59,7 @@ export async function joinHome(code, userName) {
     userName,
     isOnline: false,
     notificationPrefs: DEFAULT_NOTIFICATION_PREFS,
+    presenceUpdatedAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   }, { merge: true });
   

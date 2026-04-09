@@ -4,6 +4,7 @@ const { setGlobalOptions } = require("firebase-functions/v2");
 const {
   onDocumentCreated,
   onDocumentUpdated,
+  onDocumentWritten,
 } = require("firebase-functions/v2/firestore");
 
 admin.initializeApp();
@@ -17,6 +18,7 @@ const APP_LINK = "/";
 const APP_ICON = "/assets/icon.png";
 const NOTIFICATION_DEBOUNCE_MS = 30_000;
 const NOTIFICATION_LOCK_MS = 60_000;
+const NOTIFICATION_RECOVERY_STALE_MS = 90_000;
 const ONLINE_PRESENCE_STALE_MS = 90_000;
 const INVALID_TOKEN_ERRORS = new Set([
   "messaging/invalid-registration-token",
@@ -286,7 +288,7 @@ async function sendHomeNotification({
   const tokenEntries = membersSnapshot.docs
     .filter((memberDoc) => memberDoc.id !== excludeUserName)
     .filter((memberDoc) => {
-      const updatedAtMs = memberDoc.get("updatedAt")?.toMillis?.() || 0;
+      const updatedAtMs = memberDoc.get("presenceUpdatedAt")?.toMillis?.() || 0;
       const hasFreshOnlinePresence = memberDoc.get("isOnline") === true &&
         now - updatedAtMs < ONLINE_PRESENCE_STALE_MS;
 
@@ -424,7 +426,10 @@ async function sendHomeNotification({
 }
 
 exports.notifyShoppingItemCreated = onDocumentCreated(
-  "homes/{homeId}/shoppingItems/{itemId}",
+  {
+    document: "homes/{homeId}/shoppingItems/{itemId}",
+    retry: true,
+  },
   async (event) => {
     const shoppingItem = event.data?.data();
     const homeId = event.params.homeId;
@@ -447,7 +452,10 @@ exports.notifyShoppingItemCreated = onDocumentCreated(
 );
 
 exports.notifyShoppingItemBought = onDocumentUpdated(
-  "homes/{homeId}/shoppingItems/{itemId}",
+  {
+    document: "homes/{homeId}/shoppingItems/{itemId}",
+    retry: true,
+  },
   async (event) => {
     const before = event.data?.before?.data();
     const after = event.data?.after?.data();
@@ -472,7 +480,10 @@ exports.notifyShoppingItemBought = onDocumentUpdated(
 );
 
 exports.notifyTaskCreated = onDocumentCreated(
-  "homes/{homeId}/tasks/{taskId}",
+  {
+    document: "homes/{homeId}/tasks/{taskId}",
+    retry: true,
+  },
   async (event) => {
     const task = event.data?.data();
     const homeId = event.params.homeId;
@@ -495,7 +506,10 @@ exports.notifyTaskCreated = onDocumentCreated(
 );
 
 exports.notifyTaskDone = onDocumentUpdated(
-  "homes/{homeId}/tasks/{taskId}",
+  {
+    document: "homes/{homeId}/tasks/{taskId}",
+    retry: true,
+  },
   async (event) => {
     const before = event.data?.before?.data();
     const after = event.data?.after?.data();
@@ -516,5 +530,33 @@ exports.notifyTaskDone = onDocumentUpdated(
       type: "task-done",
       resourceId: taskId,
     });
+  },
+);
+
+exports.recoverStaleNotificationQueues = onDocumentWritten(
+  {
+    document: "homes/{homeId}/notificationDebounce/{docId}",
+    retry: true,
+  },
+  async (event) => {
+    const after = event.data?.after;
+    if (!after?.exists) return;
+
+    const queueData = after.data();
+    const lastQueuedAtMs = queueData?.lastQueuedAt?.toMillis?.() || 0;
+    const processingLockUntilMs = queueData?.processingLockUntil?.toMillis?.() || 0;
+    const now = Date.now();
+
+    if (!lastQueuedAtMs) return;
+    if (now - lastQueuedAtMs < NOTIFICATION_RECOVERY_STALE_MS) return;
+    if (processingLockUntilMs > now) return;
+
+    logger.warn("Recovering stale grouped notification queue", {
+      path: after.ref.path,
+      lastQueuedAtMs,
+      processingLockUntilMs,
+    });
+
+    await flushGroupedNotification(after.ref);
   },
 );

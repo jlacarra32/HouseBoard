@@ -2,7 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function memberAllowedKeys() {
-      return ['userName', 'isOnline', 'updatedAt', 'notificationPrefs', 'fcmToken', 'fcmTokens'];
+      return ['userName', 'isOnline', 'updatedAt', 'presenceUpdatedAt', 'notificationPrefs', 'fcmToken', 'fcmTokens'];
     }
 
     // Sin auth real no podemos demostrar identidad; esta restriccion solo fuerza
@@ -32,8 +32,7 @@ service cloud.firestore {
       }
 
       match /config/{docId} {
-        allow read: if true;
-        allow write: if false;
+        allow read, write: if true;
       }
 
       match /notificationDebounce/{docId} {

@@ -83,15 +83,21 @@ function getCurrentMemberRef() {
   return doc(db, 'homes', currentHomeId, 'members', currentUser);
 }
 
-async function syncCurrentMemberState(isOnline) {
-  const memberRef = getCurrentMemberRef();
+function getMemberRefForUser(userName) {
+  if (!currentHomeId || !userName) return null;
+  return doc(db, 'homes', currentHomeId, 'members', userName);
+}
+
+async function syncMemberStateForUser(userName, isOnline) {
+  const memberRef = getMemberRefForUser(userName);
   if (!memberRef) return;
 
   try {
     const memberSnap = await getDoc(memberRef);
     const payload = {
-      userName: currentUser,
+      userName,
       isOnline,
+      presenceUpdatedAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
 
@@ -103,6 +109,29 @@ async function syncCurrentMemberState(isOnline) {
   } catch (error) {
     console.error('No se pudo sincronizar el estado del miembro:', error);
   }
+}
+
+async function syncCurrentMemberState(isOnline) {
+  await syncMemberStateForUser(currentUser, isOnline);
+}
+
+async function handleCurrentUserRenamed(event) {
+  const nextUserName = event.detail?.userName?.trim();
+  const previousUserName = event.detail?.previousUserName?.trim() || '';
+
+  if (!nextUserName || nextUserName === currentUser) {
+    setActiveUser(nextUserName || currentUser);
+    return;
+  }
+
+  if (previousUserName) {
+    await syncMemberStateForUser(previousUserName, false);
+  }
+
+  currentUser = nextUserName;
+  setActiveUser(currentUser);
+  await syncCurrentMemberState(document.visibilityState === 'visible');
+  await initPushNotifications(currentHomeId, currentUser);
 }
 
 function handlePresenceVisibilityChange() {
@@ -119,6 +148,9 @@ function bindPresenceLifecycle() {
   presenceLifecycleBound = true;
 
   document.addEventListener('visibilitychange', handlePresenceVisibilityChange);
+  window.addEventListener('houseboard:user-renamed', (event) => {
+    void handleCurrentUserRenamed(event);
+  });
   window.setInterval(() => {
     if (document.visibilityState === 'visible') {
       void syncCurrentMemberState(true);

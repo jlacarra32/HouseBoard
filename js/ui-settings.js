@@ -7,7 +7,7 @@ import {
   arrayRemove,
   serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-import { setActiveUser, showToast, showCustomPrompt } from './ui-shared.js';
+import { showToast, showCustomPrompt } from './ui-shared.js';
 import { getHomesForUser, createHome, joinHome } from './db-homes.js';
 
 const getHomeRef = () => doc(db, 'homes', localStorage.getItem('lrhome_homeId'));
@@ -280,6 +280,7 @@ function closePanel() {
 function _saveName() {
   const input = document.getElementById('settings-name-input');
   const name = input?.value.trim();
+  const previousName = localStorage.getItem('lrhome_user') || '';
 
   if (!name) {
     showToast('El nombre no puede estar vacío.', 'error');
@@ -293,7 +294,12 @@ function _saveName() {
   }
 
   localStorage.setItem('lrhome_user', name);
-  setActiveUser(name);
+  window.dispatchEvent(new CustomEvent('houseboard:user-renamed', {
+    detail: {
+      previousUserName: previousName,
+      userName: name,
+    },
+  }));
   showToast(`Nombre actualizado a "${name}" ✓`, 'success');
 }
 
