@@ -65,6 +65,7 @@ const DEFAULT_NOTIFICATION_PREFS = {
   taskAdded: true,
   taskDone: true,
 };
+const PRESENCE_HEARTBEAT_MS = 60_000;
 
 function trackAnalyticsEvent(eventName, params = {}) {
   if (!analytics) return;
@@ -104,25 +105,25 @@ async function syncCurrentMemberState(isOnline) {
   }
 }
 
-function markCurrentMemberOffline() {
-  const memberRef = getCurrentMemberRef();
-  if (!memberRef) return;
+function handlePresenceVisibilityChange() {
+  if (document.hidden) {
+    void syncCurrentMemberState(false);
+    return;
+  }
 
-  setDoc(memberRef, {
-    userName: currentUser,
-    isOnline: false,
-    updatedAt: serverTimestamp(),
-  }, { merge: true }).catch((error) => {
-    console.error('No se pudo marcar al usuario como desconectado:', error);
-  });
+  void syncCurrentMemberState(true);
 }
 
 function bindPresenceLifecycle() {
   if (presenceLifecycleBound) return;
   presenceLifecycleBound = true;
 
-  window.addEventListener('beforeunload', markCurrentMemberOffline);
-  window.addEventListener('pagehide', markCurrentMemberOffline);
+  document.addEventListener('visibilitychange', handlePresenceVisibilityChange);
+  window.setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      void syncCurrentMemberState(true);
+    }
+  }, PRESENCE_HEARTBEAT_MS);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -245,7 +246,7 @@ function startApp() {
 
   setActiveUser(currentUser);
   bindPresenceLifecycle();
-  void syncCurrentMemberState(true);
+  void syncCurrentMemberState(document.visibilityState === 'visible');
   initPushNotifications(currentHomeId, currentUser);
   trackAnalyticsEvent('login', { content_type: 'app_start' });
   

@@ -17,6 +17,7 @@ const APP_LINK = "/";
 const APP_ICON = "/assets/icon.png";
 const NOTIFICATION_DEBOUNCE_MS = 30_000;
 const NOTIFICATION_LOCK_MS = 60_000;
+const ONLINE_PRESENCE_STALE_MS = 90_000;
 const INVALID_TOKEN_ERRORS = new Set([
   "messaging/invalid-registration-token",
   "messaging/registration-token-not-registered",
@@ -261,10 +262,15 @@ async function sendHomeNotification({
 
   const membersSnapshot = await db.collection(`homes/${homeId}/members`).get();
   const prefKey = getNotificationPrefKey(type);
+  const now = Date.now();
   const tokenEntries = membersSnapshot.docs
     .filter((memberDoc) => memberDoc.id !== excludeUserName)
     .filter((memberDoc) => {
-      if (memberDoc.get("isOnline") === true) {
+      const updatedAtMs = memberDoc.get("updatedAt")?.toMillis?.() || 0;
+      const hasFreshOnlinePresence = memberDoc.get("isOnline") === true &&
+        now - updatedAtMs < ONLINE_PRESENCE_STALE_MS;
+
+      if (hasFreshOnlinePresence) {
         return false;
       }
 
@@ -305,11 +311,17 @@ async function sendHomeNotification({
 
   const response = await messaging.sendEachForMulticast({
     tokens: uniqueEntries.map((entry) => entry.token),
+    notification: {
+      title: notificationTitle,
+      body,
+    },
+    android: {
+      priority: "high",
+    },
     data: {
       title: notificationTitle,
       body,
       icon: APP_ICON,
-      badge: APP_ICON,
       link: notificationLink,
       type,
       homeId,
