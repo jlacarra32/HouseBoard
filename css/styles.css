@@ -1035,6 +1035,13 @@ body {
   flex-shrink: 0;
 }
 
+.settings-panel__header-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .settings-panel__title {
   font-size: 1.0625rem;
   font-weight: 700;
@@ -1042,6 +1049,7 @@ body {
   letter-spacing: -0.01em;
 }
 
+.settings-panel__back,
 .settings-panel__close {
   width: 36px;
   height: 36px;
@@ -1056,14 +1064,16 @@ body {
   transition: background 0.2s ease, color 0.2s ease;
 }
 
-.settings-panel__close:hover {
-  background: var(--color-surface-2);
-  color: var(--color-text);
-}
-
+.settings-panel__back svg,
 .settings-panel__close svg {
   width: 18px;
   height: 18px;
+}
+
+.settings-panel__back:hover,
+.settings-panel__close:hover {
+  background: var(--color-surface-2);
+  color: var(--color-text);
 }
 
 .settings-panel__body {
@@ -1071,6 +1081,9 @@ body {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch; /* scroll inercial en iOS */
   padding: 16px;
+}
+
+.settings-panel__view {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -1108,6 +1121,10 @@ body {
 
 .settings-block__content {
   padding: 14px 16px;
+}
+
+.settings-label--spaced {
+  margin-top: 16px;
 }
 
 .settings-label {
@@ -1150,6 +1167,190 @@ body {
 .settings-add-btn svg {
   width: 16px;
   height: 16px;
+}
+
+.settings-home-code {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.settings-home-code strong {
+  color: var(--color-text);
+}
+
+.settings-home-list {
+  margin-top: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-home-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-surface-2);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+}
+
+.settings-home-row__status {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.settings-home-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.settings-secondary-btn {
+  padding: 8px;
+  font-size: 0.8rem;
+  background: var(--color-surface-2);
+  border-radius: var(--radius-sm);
+}
+
+.settings-nav-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  padding: 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.settings-nav-row:last-child {
+  border-bottom: none;
+}
+
+.settings-nav-row__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.settings-nav-row__title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.settings-nav-row__subtitle {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.settings-nav-row__arrow {
+  width: 18px;
+  height: 18px;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.settings-switch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+}
+
+.settings-switch-row__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.settings-switch-row__title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.settings-switch-row__status {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.settings-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.settings-switch__input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  margin: 0;
+}
+
+.settings-switch__track {
+  position: relative;
+  width: 50px;
+  height: 30px;
+  border-radius: var(--radius-pill);
+  background: #c5d0c8;
+  box-shadow: inset 0 0 0 1px rgba(30, 45, 37, 0.08);
+  transition: background 0.22s ease, box-shadow 0.22s ease;
+}
+
+.settings-switch__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16);
+  transition: transform 0.22s ease;
+}
+
+.settings-switch__input:checked + .settings-switch__track {
+  background: var(--color-primary-light);
+}
+
+.settings-switch__input:checked + .settings-switch__track .settings-switch__thumb {
+  transform: translateX(20px);
+}
+
+.settings-switch__input:focus-visible + .settings-switch__track {
+  box-shadow: 0 0 0 3px rgba(61, 122, 94, 0.18);
+}
+
+@media (hover: hover) {
+  .settings-nav-row:hover {
+    background: var(--color-surface-2);
+  }
 }
 
 /* ─── Settings chips ──────────────────────────────────────────────────────── */
@@ -1219,6 +1420,15 @@ body {
   .settings-chip {
     background: rgba(61, 122, 94, 0.15);
     border-color: var(--color-border);
+  }
+
+  .settings-switch__track {
+    background: #415346;
+    box-shadow: inset 0 0 0 1px rgba(232, 240, 234, 0.08);
+  }
+
+  .settings-switch__thumb {
+    background: #f5f7f5;
   }
 }
 /* ─── Install Banner (PWA) ──────────────────────────────────────────────────── */
