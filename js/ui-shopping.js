@@ -248,7 +248,7 @@ export function bindShoppingEvents(handlers) {
       ));
 
       if (duplicateItem) {
-        showToast(`"${duplicateItem.name}" ya esta en la lista`, 'info');
+        showToast(`"${duplicateItem.name}" ya esta en la lista`, 'error');
         nameInput?.focus();
         nameInput?.select?.();
         return;
