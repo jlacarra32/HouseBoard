@@ -3,5 +3,8 @@
   "version": "1.0.0",
   "scripts": {
     "build": "node build-config.js"
+  },
+  "dependencies": {
+    "@vercel/speed-insights": "^2.0.0"
   }
 }
