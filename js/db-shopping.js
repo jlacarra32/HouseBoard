@@ -21,6 +21,28 @@ import {
 
 const getCollection = () => `homes/${localStorage.getItem('lrhome_homeId')}/shoppingItems`;
 
+export function normalizeShoppingItemName(value) {
+  return String(value || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLocaleLowerCase('es-ES');
+}
+
+async function findPendingShoppingDuplicate(name) {
+  const normalizedName = normalizeShoppingItemName(name);
+  if (!normalizedName) return null;
+
+  const q = query(
+    collection(db, getCollection()),
+    where('status', '==', 'pending')
+  );
+  const snapshot = await getDocs(q);
+
+  return snapshot.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .find((item) => normalizeShoppingItemName(item.name) === normalizedName) || null;
+}
+
 export function subscribeToShoppingItems(callback) {
   const q = query(
     collection(db, getCollection()),
@@ -35,6 +57,12 @@ export function subscribeToShoppingItems(callback) {
 export async function addShoppingItem(itemData) {
   const name = (itemData.name || '').trim();
   if (!name || name.length > 80) throw new Error('El nombre es obligatorio.');
+
+  const duplicateItem = await findPendingShoppingDuplicate(name);
+  if (duplicateItem) {
+    throw new Error(`"${duplicateItem.name}" ya esta en la lista`);
+  }
+
   await addDoc(collection(db, getCollection()), {
     name,
     quantity:   (itemData.quantity || '').trim(),

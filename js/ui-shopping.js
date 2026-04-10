@@ -5,6 +5,9 @@
 
 import { showToast } from './ui-shared.js';
 import { shoppingCategories } from './ui-settings.js';
+import { normalizeShoppingItemName } from './db-shopping.js';
+
+let latestShoppingItems = [];
 
 /** Inyecta el HTML del módulo en el contenedor #shopping-module */
 export function initShoppingUI() {
@@ -90,6 +93,8 @@ export function initShoppingUI() {
 export function renderShoppingItems(items, view = 'recent') {
   const container = document.getElementById('shopping-list');
   if (!container) return;
+
+  latestShoppingItems = Array.isArray(items) ? items : [];
 
   const pending = items.filter(i => i.status === 'pending');
   const bought  = items.filter(i => i.status === 'bought');
@@ -236,6 +241,19 @@ export function bindShoppingEvents(handlers) {
         showToast('Escribe el nombre del producto.', 'error');
         return;
       }
+
+      const duplicateItem = latestShoppingItems.find((item) => (
+        item.status === 'pending'
+        && normalizeShoppingItemName(item.name) === normalizeShoppingItemName(name)
+      ));
+
+      if (duplicateItem) {
+        showToast(`"${duplicateItem.name}" ya esta en la lista`, 'info');
+        nameInput?.focus();
+        nameInput?.select?.();
+        return;
+      }
+
       // Estado de carga
       if (submitBtn) {
         submitBtn.disabled = true;
