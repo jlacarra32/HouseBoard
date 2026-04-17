@@ -6,14 +6,16 @@
   <meta name="description" content="HouseBoard — App familiar para organizar la lista de la compra y las tareas del hogar en tiempo real." />
   <title>HouseBoard</title>
 
-  <!-- Script síncrono mínimo: aplica clase al <html> para mostrar contenido
-       sin esperar a que los módulos JS descarguen (elimina pantalla en blanco). -->
+  <!-- Script síncrono mínimo: marca en <html> qué pantalla mostrar.
+       CSS lo usa para sobreescribir el atributo hidden en el primer paint,
+       sin tocar la lógica de app.js que sigue gestionando hidden normalmente. -->
   <script>
     (function () {
       var user   = localStorage.getItem('lrhome_user');
       var homeId = localStorage.getItem('lrhome_homeId');
-      document.documentElement.classList.add(
-        user && homeId ? 'is-app-ready' : 'is-welcome-ready'
+      document.documentElement.setAttribute(
+        'data-show',
+        (user && homeId) ? 'app' : 'welcome-screen'
       );
     })();
   </script>
@@ -67,7 +69,7 @@
        PANTALLA DE BIENVENIDA
        Se muestra si no hay nombre de usuario guardado en localStorage.
   ─────────────────────────────────────────────────────────────────────────── -->
-  <div id="welcome-screen">
+  <div id="welcome-screen" hidden>
     <h1 class="welcome__logo">HouseBoard</h1>
     <p class="welcome__subtitle">Tu hogar, organizado.</p>
 
@@ -137,7 +139,7 @@
        APLICACIÓN PRINCIPAL
        Oculta hasta que hay un nombre de usuario.
   ─────────────────────────────────────────────────────────────────────────── -->
-  <div id="app">
+  <div id="app" hidden>
 
     <!-- Header fijo -->
     <header class="app-header" role="banner">

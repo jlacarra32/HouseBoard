@@ -1490,16 +1490,14 @@ body {
   color: var(--color-danger);
 }
 
-/* ─── Visibilidad inicial (antes de que carguen los módulos JS) ──────────────
-   El script síncrono en index.html añade 'is-app-ready' o 'is-welcome-ready'
-   al <html> de forma instantánea para evitar la pantalla en blanco.
-   Sin esas clases (JS desactivado) → el <noscript> de fonts ya cubre fonts;
-   el usuario verá el welcome screen por defecto.
+/* ─── Visibilidad inicial sin pantalla en blanco ────────────────────────────
+   El script síncrono en <head> escribe data-show="app" o
+   data-show="welcome-screen" en el elemento <html> ANTES del primer paint.
+   Estas reglas usan !important para superar al UA stylesheet
+   ([hidden] { display: none !important }).
+   Una vez que los módulos JS cargan, app.js retoma el control del atributo
+   hidden con normalidad — estas reglas simplemente adelantan la primera vista.
 ─────────────────────────────────────────────────────────────────────────── */
-#welcome-screen,
-#app {
-  display: none;
-}
+html[data-show="welcome-screen"] #welcome-screen { display: flex  !important; }
+html[data-show="app"]            #app             { display: block !important; }
 
-html.is-welcome-ready #welcome-screen { display: flex; }
-html.is-app-ready     #app            { display: block; }
