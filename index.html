@@ -6,18 +6,47 @@
   <meta name="description" content="HouseBoard — App familiar para organizar la lista de la compra y las tareas del hogar en tiempo real." />
   <title>HouseBoard</title>
 
-  <!-- Google Fonts: Inter -->
+  <!-- Script síncrono mínimo: aplica clase al <html> para mostrar contenido
+       sin esperar a que los módulos JS descarguen (elimina pantalla en blanco). -->
+  <script>
+    (function () {
+      var user   = localStorage.getItem('lrhome_user');
+      var homeId = localStorage.getItem('lrhome_homeId');
+      document.documentElement.classList.add(
+        user && homeId ? 'is-app-ready' : 'is-welcome-ready'
+      );
+    })();
+  </script>
+
+  <!-- Preconexiones anticipadas -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://unpkg.com" />
+
+  <!-- Google Fonts: carga NO bloqueante (preload → stylesheet on load) -->
   <link
+    rel="preload"
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-    rel="stylesheet"
+    as="style"
+    onload="this.onload=null;this.rel='stylesheet'"
   />
+  <noscript>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+    />
+  </noscript>
 
-  <!-- Lucide Icons (CDN) -->
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <!-- Firebase SDK: modulepreload para descargar en paralelo con el parseo del HTML -->
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js" />
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js" />
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js" />
 
-  <!-- Vercel Analytics & Speed Insights (vanilla HTML) -->
+  <!-- Lucide Icons: versión fija + defer (no bloqueante) -->
+  <script defer src="https://unpkg.com/lucide@0.395.0/dist/umd/lucide.min.js"></script>
+
+  <!-- Vercel Analytics & Speed Insights -->
   <script defer src="/_vercel/insights/script.js"></script>
   <script defer src="/_vercel/speed-insights/script.js"></script>
 
@@ -38,7 +67,7 @@
        PANTALLA DE BIENVENIDA
        Se muestra si no hay nombre de usuario guardado en localStorage.
   ─────────────────────────────────────────────────────────────────────────── -->
-  <div id="welcome-screen" hidden>
+  <div id="welcome-screen">
     <h1 class="welcome__logo">HouseBoard</h1>
     <p class="welcome__subtitle">Tu hogar, organizado.</p>
 
@@ -108,7 +137,7 @@
        APLICACIÓN PRINCIPAL
        Oculta hasta que hay un nombre de usuario.
   ─────────────────────────────────────────────────────────────────────────── -->
-  <div id="app" hidden>
+  <div id="app">
 
     <!-- Header fijo -->
     <header class="app-header" role="banner">

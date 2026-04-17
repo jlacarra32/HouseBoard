@@ -1489,3 +1489,17 @@ body {
   background: var(--color-danger-light);
   color: var(--color-danger);
 }
+
+/* ─── Visibilidad inicial (antes de que carguen los módulos JS) ──────────────
+   El script síncrono en index.html añade 'is-app-ready' o 'is-welcome-ready'
+   al <html> de forma instantánea para evitar la pantalla en blanco.
+   Sin esas clases (JS desactivado) → el <noscript> de fonts ya cubre fonts;
+   el usuario verá el welcome screen por defecto.
+─────────────────────────────────────────────────────────────────────────── */
+#welcome-screen,
+#app {
+  display: none;
+}
+
+html.is-welcome-ready #welcome-screen { display: flex; }
+html.is-app-ready     #app            { display: block; }
